@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
 
 import { Button, LinkButton } from './components/Button'
-import { cad, claims, steps } from './content'
+import { cad, claims, faq, steps, tiers } from './content'
 import { Wordmark } from './components/Wordmark'
 import { Workstation } from './components/Workstation'
 import { useReveal } from './lib/useReveal'
@@ -23,7 +23,11 @@ export function App() {
         <Ticker />
         <Claims />
         <HowItWorks />
+        <Pricing />
+        <Faq />
+        <Closing />
       </main>
+      <Footer />
     </>
   )
 }
@@ -38,8 +42,8 @@ const column = 'mx-auto max-w-5xl px-5 sm:px-8 sm:rails'
 function Crosses() {
   return (
     <>
-      <span aria-hidden className="cross bottom-[-4px] left-[-4px] hidden sm:block" />
-      <span aria-hidden className="cross right-[-4px] bottom-[-4px] hidden sm:block" />
+      <span aria-hidden className="cross -bottom-1 -left-1 hidden sm:block" />
+      <span aria-hidden className="cross -right-1 -bottom-1 hidden sm:block" />
     </>
   )
 }
@@ -307,5 +311,152 @@ function HowItWorks() {
         </ol>
       </div>
     </Section>
+  )
+}
+
+function Pricing() {
+  return (
+    <Section id="pricing" className="py-20 sm:py-28">
+      <Heading n="03" label="Pricing" sub="Three workstation classes. Pay per second while one is running; nothing while it is stopped.">
+        A tier for the work in front of you.
+      </Heading>
+      <ul className="mt-12 grid gap-4 sm:grid-cols-3">
+        {tiers.map((t, i) => (
+          <li
+            key={t.name}
+            style={stagger(i)}
+            className={`reveal relative flex flex-col rounded-md border bg-surface p-6 ${
+              t.featured ? 'order-first border-ink sm:order-none' : 'border-hairline'
+            }`}
+          >
+            {t.featured && (
+              <Label className="absolute -top-2 left-5 bg-surface px-1.5 text-accent">
+                Most popular
+              </Label>
+            )}
+            <h3 className="font-display text-lg tracking-[-0.02em] text-ink">{t.name}</h3>
+            <Label className="mt-1 normal-case">
+              {t.gpu} · {t.spec}
+            </Label>
+            <p className="mt-6 font-display text-2xl tracking-[-0.02em] text-ink">{t.price}</p>
+            <p className="mt-2 text-base text-ink-muted">{t.fit}</p>
+            <ul className="mt-6 flex flex-col gap-2 border-t border-hairline pt-6 text-sm text-ink">
+              {t.bullets.map((b) => (
+                <li key={b} className="flex items-center gap-2">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="square"
+                    aria-hidden
+                    className="text-accent"
+                  >
+                    <path d="M3 8.5l3 3 7-7" />
+                  </svg>
+                  {b}
+                </li>
+              ))}
+            </ul>
+            <Button
+              variant={t.featured ? 'primary' : 'secondary'}
+              size="lg"
+              disabled
+              className="mt-8 w-full justify-center"
+            >
+              {t.cta}
+            </Button>
+          </li>
+        ))}
+      </ul>
+      <Label className="reveal mt-6">[Specs indicative; final hardware and rates to be confirmed.]</Label>
+    </Section>
+  )
+}
+
+function Faq() {
+  return (
+    <Section id="faq" className="py-20 sm:py-28">
+      <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
+        <Heading n="04" label="FAQ">Questions, before you ask for a demo.</Heading>
+        <div className="border-t border-hairline">
+          {faq.map((f, i) => (
+            <details
+              key={f.q}
+              style={stagger(i)}
+              className="disclosure reveal group border-b border-hairline"
+            >
+              <summary className="flex cursor-pointer items-center justify-between gap-6 py-5 text-base text-ink transition-colors duration-(--dur-fast) hover:text-accent">
+                {f.q}
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="square"
+                  aria-hidden
+                  className="shrink-0 text-ink-subtle"
+                >
+                  <path d="M8 2v12M2 8h12" />
+                </svg>
+              </summary>
+              <p className="max-w-xl pb-6 text-base text-ink-muted">{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </Section>
+  )
+}
+
+function Closing() {
+  return (
+    <Section className="py-24 text-center sm:py-32">
+      <div className="reveal mx-auto flex max-w-xl flex-col items-center">
+        <Workstation className="w-24 text-ink-subtle" />
+        <h2 className="mt-8 font-display text-2xl tracking-[-0.02em] text-ink sm:text-3xl">
+          Open the assembly your Mac can&rsquo;t.
+        </h2>
+        <p className="mt-4 text-md text-ink-muted">
+          Minutes to a working CAD session. No cloud vocabulary. No bill after you close the lid.
+        </p>
+        <Button variant="primary" size="lg" disabled className="mt-8">
+          Request a demo
+        </Button>
+        <Label className="mt-6">Early access · [date]</Label>
+      </div>
+    </Section>
+  )
+}
+
+function Footer() {
+  return (
+    <footer>
+      <div className={`${column} flex flex-col gap-8 py-10 sm:flex-row sm:items-center sm:justify-between`}>
+        <div className="flex flex-col gap-2">
+          <Wordmark />
+          <p className="text-sm text-ink-muted">Cloud CAD workstations for Mac.</p>
+        </div>
+        <nav className="flex gap-6 text-sm text-ink-muted">
+          {[
+            ['How it works', '#how'],
+            ['Pricing', '#pricing'],
+            ['FAQ', '#faq'],
+          ].map(([label, href]) => (
+            <a key={href} href={href} className="transition-colors duration-(--dur-fast) hover:text-ink">
+              {label}
+            </a>
+          ))}
+        </nav>
+        <div className="flex items-center gap-3 text-sm text-ink-subtle">
+          <span>© 2026 meshrun</span>
+          <ThemeToggle />
+        </div>
+      </div>
+    </footer>
   )
 }
