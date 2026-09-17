@@ -397,6 +397,40 @@
   }
 }
 
+/* Cards drawn as cells of a ruled grid. A 1px gap over a hairline ground is
+   the divider, so cells share lines instead of each carrying a border. The
+   featured cell, and any cell under the cursor, takes one tonal step and one
+   inset ink rule — depth without a shadow. Siblings dim by filter, not
+   opacity, so the reveal's staggered opacity transition is left alone. */
+@utility ruled {
+  display: grid;
+  gap: 1px;
+  background: var(--color-hairline);
+  border: 1px solid var(--color-hairline);
+  & > li {
+    background: var(--color-bg);
+    transition:
+      opacity var(--dur-slow) var(--ease-expressive) var(--stagger, 0ms),
+      transform var(--dur-slow) var(--ease-expressive) var(--stagger, 0ms),
+      background-color var(--dur-base) var(--ease-expressive),
+      box-shadow var(--dur-base) var(--ease-expressive),
+      filter var(--dur-base) var(--ease-expressive);
+  }
+  & > li.featured,
+  & > li:hover {
+    background: var(--color-surface);
+    box-shadow: inset 0 0 0 1px var(--color-ink);
+  }
+  /* The recommendation hands over to whichever cell is under the cursor. */
+  &:hover > li.featured:not(:hover) {
+    background: var(--color-bg);
+    box-shadow: none;
+  }
+  &:hover > li:not(:hover) {
+    filter: opacity(0.7);
+  }
+}
+
 /* FAQ chevron: rotates when the native <details> opens. No JS. */
 @utility disclosure {
   & summary {

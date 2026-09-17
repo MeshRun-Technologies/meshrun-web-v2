@@ -58,12 +58,39 @@ export function App() {
 
 const column = 'mx-auto max-w-5xl px-5 sm:px-8 sm:rails'
 
-function Crosses() {
+function Crosses({ all = false }: { all?: boolean }) {
   return (
     <>
+      {all && (
+        <>
+          <span aria-hidden className="cross -top-1 -left-1 hidden sm:block" />
+          <span aria-hidden className="cross -top-1 -right-1 hidden sm:block" />
+        </>
+      )}
       <span aria-hidden className="cross -bottom-1 -left-1 hidden sm:block" />
       <span aria-hidden className="cross -right-1 -bottom-1 hidden sm:block" />
     </>
+  )
+}
+
+// A card group drawn as a ruled grid, registration marks on its corners.
+function Ruled({
+  ordered = false,
+  cols = '',
+  className = '',
+  children,
+}: {
+  ordered?: boolean
+  cols?: string
+  className?: string
+  children: ReactNode
+}) {
+  const List = ordered ? 'ol' : 'ul'
+  return (
+    <div className={`relative ${className}`}>
+      <Crosses all />
+      <List className={`ruled ${cols}`}>{children}</List>
+    </div>
   )
 }
 
@@ -312,13 +339,9 @@ function Claims() {
   return (
     <Section className="py-20 sm:py-28">
       <Heading n="01" label="Why meshrun" sub="Three things a bare GPU machine leaves you to do yourself." title="Built for CAD, not for cloud admins." />
-      <ul className="mt-12 grid gap-4 sm:grid-cols-3">
+      <Ruled className="mt-12" cols="sm:grid-cols-3">
         {claims.map((c, i) => (
-          <li
-            key={c.title}
-            style={stagger(i)}
-            className="reveal rounded-md border border-hairline bg-surface p-6 transition-colors duration-(--dur-fast) hover:border-hairline-strong"
-          >
+          <li key={c.title} style={stagger(i)} className="reveal p-6">
             <span className="text-accent">
               <Icon name={c.icon} />
             </span>
@@ -326,7 +349,7 @@ function Claims() {
             <p className="mt-2 text-base text-ink-muted">{c.body}</p>
           </li>
         ))}
-      </ul>
+      </Ruled>
     </Section>
   )
 }
@@ -336,13 +359,9 @@ function HowItWorks() {
     <Section id="how" className="py-20 sm:py-28">
       <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
         <Heading n="02" label="How it works" sub="Three steps from a laptop that can't to a session that can." title="Sign in. Pick a workstation. Draw." />
-        <ol className="rounded-md border border-hairline bg-surface">
+        <Ruled ordered>
           {steps.map((s, i) => (
-            <li
-              key={s.title}
-              style={stagger(i)}
-              className={`reveal grid grid-cols-[3rem_1fr] gap-4 p-6 ${i < steps.length - 1 ? 'rule-draw' : ''}`}
-            >
+            <li key={s.title} style={stagger(i)} className="reveal grid grid-cols-[3rem_1fr] gap-4 p-6">
               <span className="font-mono text-sm text-accent tabular-nums">0{i + 1}</span>
               <div>
                 <h3 className="font-display text-lg tracking-[-0.02em] text-ink">{s.title}</h3>
@@ -350,7 +369,7 @@ function HowItWorks() {
               </div>
             </li>
           ))}
-        </ol>
+        </Ruled>
       </div>
     </Section>
   )
@@ -360,17 +379,15 @@ function Pricing() {
   return (
     <Section id="pricing" className="py-20 sm:py-28">
       <Heading n="03" label="Pricing" sub="Three workstation classes. Pay per second while one is running; nothing while it is stopped." title="Three classes of workstation." />
-      <ul className="mt-12 grid gap-4 sm:grid-cols-3">
+      <Ruled className="mt-12" cols="sm:grid-cols-3">
         {tiers.map((t, i) => (
           <li
             key={t.name}
             style={stagger(i)}
-            className={`reveal relative flex flex-col rounded-md border bg-surface p-6 ${
-              t.featured ? 'order-first border-ink sm:order-0' : 'border-hairline'
-            }`}
+            className={`reveal relative flex flex-col p-6 ${t.featured ? 'featured order-first sm:order-0' : ''}`}
           >
             {t.featured && (
-              <Label className="absolute -top-2 left-5 bg-surface px-1.5 text-accent">
+              <Label className="absolute -top-2 left-5 bg-bg px-1.5 text-accent">
                 Most popular
               </Label>
             )}
@@ -410,7 +427,7 @@ function Pricing() {
             </Button>
           </li>
         ))}
-      </ul>
+      </Ruled>
       <Label className="reveal mt-6">[Specs indicative; final hardware and rates to be confirmed.]</Label>
     </Section>
   )
