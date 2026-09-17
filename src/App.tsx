@@ -203,10 +203,11 @@ function Nav() {
 function Hero() {
   return (
     <Section>
-      <div className="grid min-h-[70svh] items-center gap-12 py-20 sm:py-28 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid items-center gap-12 py-20 sm:py-28 lg:grid-cols-[1.5fr_1fr]">
         <div>
           <Label className="row-in mb-6">Cloud CAD workstations for Mac</Label>
-          <h1 className="font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
+          {/* Sized to the viewport so "Run CAD on a Mac" holds one line on a phone. */}
+          <h1 className="font-display text-[clamp(36px,10vw,60px)] leading-[1.04] tracking-[-0.02em] text-ink">
             <span className="line-reveal">
               <span>Run CAD on a Mac</span>
             </span>
@@ -265,8 +266,8 @@ function Ticker() {
 function Claims() {
   return (
     <Section className="py-20 sm:py-28">
-      <Heading n="01" label="Why meshrun" sub="A workstation for CAD, not a bare machine you have to finish yourself.">
-        Open the assembly your Mac can&rsquo;t.
+      <Heading n="01" label="Why meshrun" sub="Three things a bare GPU machine leaves you to do yourself.">
+        Built for CAD, not for cloud admins.
       </Heading>
       <ul className="mt-12 grid gap-4 sm:grid-cols-3">
         {claims.map((c, i) => (
@@ -318,7 +319,7 @@ function Pricing() {
   return (
     <Section id="pricing" className="py-20 sm:py-28">
       <Heading n="03" label="Pricing" sub="Three workstation classes. Pay per second while one is running; nothing while it is stopped.">
-        A tier for the work in front of you.
+        Three classes of workstation.
       </Heading>
       <ul className="mt-12 grid gap-4 sm:grid-cols-3">
         {tiers.map((t, i) => (
@@ -326,7 +327,7 @@ function Pricing() {
             key={t.name}
             style={stagger(i)}
             className={`reveal relative flex flex-col rounded-md border bg-surface p-6 ${
-              t.featured ? 'order-first border-ink sm:order-none' : 'border-hairline'
+              t.featured ? 'order-first border-ink sm:order-0' : 'border-hairline'
             }`}
           >
             {t.featured && (
