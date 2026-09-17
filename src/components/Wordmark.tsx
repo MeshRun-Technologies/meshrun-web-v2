@@ -9,7 +9,7 @@ export function Wordmark({ className = '' }: { className?: string }) {
         height="22"
         fill="none"
         stroke="currentColor"
-        strokeWidth="8"
+        strokeWidth="6"
         strokeLinecap="square"
         strokeLinejoin="miter"
         aria-hidden
@@ -18,6 +18,7 @@ export function Wordmark({ className = '' }: { className?: string }) {
         <path d="M120 40 200 80 120 120 40 80Z" />
         <path d="M40 80v80l80 40v-80" />
         <path d="M200 80v80l-80 40" />
+        <path d="M134 134l52-26M134 150l52-26M134 166l52-26" />
         <circle cx="58" cy="102" r="7" className="fill-accent" stroke="none" />
       </svg>
       <span className="font-display text-base tracking-[-0.02em]">meshrun</span>

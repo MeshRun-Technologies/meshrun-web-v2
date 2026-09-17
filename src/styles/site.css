@@ -342,6 +342,30 @@
   animation: blur-in var(--dur-reveal) var(--ease-expressive) both;
 }
 
+/* The nav thins out as the page scrolls, driven by scroll position itself so
+   it tracks the thumb in both directions. Gone by 40vh; hidden, not just
+   transparent, so nothing behind it is blocked. Browsers without scroll
+   timelines simply keep the nav. */
+@keyframes nav-fade {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+    visibility: hidden;
+  }
+}
+@utility nav-fade {
+  animation: nav-fade linear both;
+  animation-timeline: scroll(root);
+  animation-range: 0 40vh;
+}
+
+/* A plotted drawing inside a reveal waits for the observer: its strokes hold
+   at zero until .pre is lifted, then the plot animation starts from there. */
+.reveal.pre .plot path,
+.reveal.pre .plot circle {
+  animation: none;
+}
+
 /* Section headlines fill from grey to ink word by word as they scroll in.
    Hangs off .reveal.pre, so a missing observer leaves them plain ink. */
 @utility ink {
@@ -373,6 +397,19 @@
   &.pre {
     opacity: 0;
     transform: translateY(12px);
+  }
+}
+
+/* Display type whose letters rise into place from below the line, one after
+   another. The observer toggles .pre on this element like any `reveal`. */
+@utility lift {
+  overflow: hidden;
+  & > span {
+    display: inline-block;
+    transition: transform var(--dur-reveal) var(--ease-expressive) var(--stagger, 0ms);
+  }
+  &.pre > span {
+    transform: translateY(110%);
   }
 }
 

@@ -1,7 +1,8 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 import { Button, LinkButton } from './components/Button'
 import { cad, claims, faq, steps, tiers } from './content'
+import { Stream } from './components/Stream'
 import { Wordmark } from './components/Wordmark'
 import { Workstation } from './components/Workstation'
 import { useReveal } from './lib/useReveal'
@@ -42,6 +43,7 @@ export function App() {
         <Ticker />
         <Claims />
         <HowItWorks />
+        <Picture />
         <Pricing />
         <Faq />
         <Closing />
@@ -56,7 +58,10 @@ export function App() {
    that bleeds past the column and crosses the rails at two registration
    marks. Rails and marks are hidden on phones, where the gutter is the edge. */
 
-const column = 'mx-auto max-w-5xl px-5 sm:px-8 sm:rails'
+const column = 'mx-auto max-w-6xl px-5 sm:px-10 sm:rails'
+
+// Section padding: generous, so each section breathes between its rules.
+const band = 'py-24 sm:py-36'
 
 function Crosses({ all = false }: { all?: boolean }) {
   return (
@@ -217,31 +222,11 @@ function ThemeToggle() {
   )
 }
 
-// True while any of the hero is on screen below the nav's own 44px band. No
-// scroll listener: the observer fires only when the hero crosses that line.
-function useHeroInView() {
-  const [inView, setInView] = useState(true)
-  useEffect(() => {
-    const hero = document.getElementById('hero')
-    if (!hero || typeof IntersectionObserver === 'undefined') return
-    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), {
-      rootMargin: '-44px 0px 0px 0px',
-    })
-    io.observe(hero)
-    return () => io.disconnect()
-  }, [])
-  return inView
-}
-
-// Bare: no fill, no rule. It floats over the hero and leaves with it.
+// Bare: no fill, no rule of its own. It floats over the top of the page and
+// thins out with the first stretch of scrolling.
 function Nav() {
-  const show = useHeroInView()
   return (
-    <header
-      className={`fixed inset-x-0 top-0 z-20 transition-[transform,opacity] duration-(--dur-base) ease-expressive ${
-        show ? '' : '-translate-y-full opacity-0 pointer-events-none'
-      }`}
-    >
+    <header className="nav-fade fixed inset-x-0 top-0 z-20">
       <div className={`${column} grid h-11 grid-cols-[1fr_auto_1fr] items-center`}>
         <Wordmark />
         <nav className="hidden gap-6 text-sm text-ink-muted sm:flex">
@@ -272,10 +257,13 @@ function Nav() {
 
 function Hero() {
   return (
-    // pt-11 clears the fixed nav inside the railed column, so the rails run
-    // unbroken from the top of the page.
-    <Section id="hero" className="pt-11">
-      <div className="grid items-center gap-12 py-20 sm:py-28 lg:grid-cols-[1.5fr_1fr]">
+    <Section id="hero">
+      {/* The page's top rule sits under the fixed nav, in the flow, so it
+          scrolls away with the hero while the nav fades over it. */}
+      <div className="rule-bleed relative h-11">
+        <Crosses />
+      </div>
+      <div className="grid items-center gap-12 py-24 sm:py-36 lg:grid-cols-[1.5fr_1fr]">
         <div>
           <Label className="row-in mb-6">Cloud CAD workstations for Mac</Label>
           {/* Sized to the viewport so "Run CAD on a Mac" holds one line on a phone. */}
@@ -323,8 +311,8 @@ function Ticker() {
     </ul>
   )
   return (
-    <Section className="py-8">
-      <Label className="reveal mb-5">Runs the CAD stack you already use</Label>
+    <Section className="py-12">
+      <Label className="reveal mb-6">Runs the CAD stack you already use</Label>
       <div className="reveal overflow-hidden mask-[linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
         <div className="ticker">
           {track(false)}
@@ -337,7 +325,7 @@ function Ticker() {
 
 function Claims() {
   return (
-    <Section className="py-20 sm:py-28">
+    <Section className={band}>
       <Heading n="01" label="Why meshrun" sub="Three things a bare GPU machine leaves you to do yourself." title="Built for CAD, not for cloud admins." />
       <Ruled className="mt-12" cols="sm:grid-cols-3">
         {claims.map((c, i) => (
@@ -356,7 +344,7 @@ function Claims() {
 
 function HowItWorks() {
   return (
-    <Section id="how" className="py-20 sm:py-28">
+    <Section id="how" className={band}>
       <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
         <Heading n="02" label="How it works" sub="Three steps from a laptop that can't to a session that can." title="Sign in. Pick a workstation. Draw." />
         <Ruled ordered>
@@ -375,9 +363,25 @@ function HowItWorks() {
   )
 }
 
+// A drawing between the words: the product, plotted when it scrolls in.
+function Picture() {
+  return (
+    <Section className="py-16 sm:py-24">
+      <div className="reveal mx-auto max-w-3xl">
+        <Stream className="w-full text-ink-subtle" />
+        <div className="mt-2 grid grid-cols-3 text-center">
+          <Label>Your Mac</Label>
+          <Label className="text-accent">Streamed, not installed</Label>
+          <Label>Cloud workstation</Label>
+        </div>
+      </div>
+    </Section>
+  )
+}
+
 function Pricing() {
   return (
-    <Section id="pricing" className="py-20 sm:py-28">
+    <Section id="pricing" className={band}>
       <Heading n="03" label="Pricing" sub="Three workstation classes. Pay per second while one is running; nothing while it is stopped." title="Three classes of workstation." />
       <Ruled className="mt-12" cols="sm:grid-cols-3">
         {tiers.map((t, i) => (
@@ -435,7 +439,7 @@ function Pricing() {
 
 function Faq() {
   return (
-    <Section id="faq" className="py-20 sm:py-28">
+    <Section id="faq" className={band}>
       <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
         <Heading n="04" label="FAQ" title="Questions, before you ask for a demo." />
         <div className="border-t border-hairline">
@@ -472,7 +476,7 @@ function Faq() {
 
 function Closing() {
   return (
-    <Section className="py-24 text-center sm:py-32">
+    <Section className={`${band} text-center`}>
       <div className="reveal mx-auto flex max-w-xl flex-col items-center">
         <Workstation className="w-24 text-ink-subtle" />
         <h2 className="mt-8 font-display text-2xl tracking-[-0.02em] text-ink sm:text-3xl">
@@ -491,25 +495,49 @@ function Closing() {
 }
 
 function Footer() {
+  const links = [
+    ['How it works', '#how'],
+    ['Pricing', '#pricing'],
+    ['FAQ', '#faq'],
+  ]
   return (
     <footer>
-      <div className={`${column} flex flex-col gap-8 py-10 sm:flex-row sm:items-center sm:justify-between`}>
-        <div className="flex flex-col gap-2">
-          <Wordmark />
-          <p className="text-sm text-ink-muted">Cloud CAD workstations for Mac.</p>
+      {/* Tagline and link columns above the wordmark, set across the whole
+          column width; then the bottom rule, then a one-line legal bar. */}
+      <Section className="py-12 sm:py-16">
+        <div className="flex flex-col gap-10 sm:flex-row sm:justify-between">
+          <p className="font-display text-xl tracking-[-0.02em] text-ink sm:text-2xl">
+            Cloud CAD workstations for Mac.
+          </p>
+          <nav className="grid gap-x-16 gap-y-2 text-sm sm:grid-cols-2">
+            <Label>Product</Label>
+            <ul className="flex flex-col gap-2 text-ink">
+              {links.map(([label, href]) => (
+                <li key={href}>
+                  <a href={href} className="text-ink-muted transition-colors duration-(--dur-fast) hover:text-ink">
+                    {label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
-        <nav className="flex gap-6 text-sm text-ink-muted">
-          {[
-            ['How it works', '#how'],
-            ['Pricing', '#pricing'],
-            ['FAQ', '#faq'],
-          ].map(([label, href]) => (
-            <a key={href} href={href} className="transition-colors duration-(--dur-fast) hover:text-ink">
-              {label}
-            </a>
+        {/* Each letter rises into place from below the clip as the footer
+            scrolls in; the observer lifts .pre from the line. */}
+        <p
+          aria-hidden
+          className="lift mt-16 font-display text-[clamp(4rem,18.5vw,15rem)] leading-none tracking-[-0.05em] text-ink select-none sm:mt-20"
+        >
+          {[...'meshrun'].map((c, i) => (
+            <span key={i} style={stagger(i)}>
+              {c}
+            </span>
           ))}
-        </nav>
-        <div className="flex items-center gap-3 text-sm text-ink-subtle">
+        </p>
+      </Section>
+      <div className={`${column} flex items-center justify-between py-6 text-sm text-ink-subtle`}>
+        <Wordmark />
+        <div className="flex items-center gap-6">
           <span>© 2026 meshrun</span>
           <ThemeToggle />
         </div>
