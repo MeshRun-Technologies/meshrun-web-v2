@@ -257,12 +257,16 @@ function Nav() {
 
 function Hero() {
   return (
-    <Section id="hero">
+    <>
       {/* The page's top rule sits under the fixed nav, in the flow, so it
-          scrolls away with the hero while the nav fades over it. */}
-      <div className="rule-bleed relative h-11">
-        <Crosses />
+          scrolls away with the hero while the nav fades over it. Same column
+          as every section, so its crosses land on the rails. */}
+      <div className="rule-bleed">
+        <div className={`${column} h-11`}>
+          <Crosses />
+        </div>
       </div>
+      <Section id="hero">
       <div className="grid items-center gap-12 py-24 sm:py-36 lg:grid-cols-[1.5fr_1fr]">
         <div>
           <Label className="row-in mb-6">Cloud CAD workstations for Mac</Label>
@@ -294,7 +298,8 @@ function Hero() {
         </div>
         <Workstation className="w-48 justify-self-center text-ink-subtle sm:w-64 lg:w-72 lg:justify-self-end" />
       </div>
-    </Section>
+      </Section>
+    </>
   )
 }
 
@@ -524,16 +529,19 @@ function Footer() {
         </div>
         {/* Each letter rises into place from below the clip as the footer
             scrolls in; the observer lifts .pre from the line. */}
-        <p
-          aria-hidden
-          className="lift mt-16 font-display text-[clamp(4rem,18.5vw,15rem)] leading-none tracking-[-0.05em] text-ink select-none sm:mt-20"
-        >
-          {[...'meshrun'].map((c, i) => (
-            <span key={i} style={stagger(i)}>
-              {c}
-            </span>
-          ))}
-        </p>
+        <div className="@container mt-16 sm:mt-20">
+          {/* Sized to the column, not the viewport: the word spans rail to rail. */}
+          <p
+            aria-hidden
+            className="lift font-display text-[26.5cqw] leading-none tracking-[-0.05em] whitespace-nowrap text-ink select-none"
+          >
+            {[...'meshrun'].map((c, i) => (
+              <span key={i} style={stagger(i)}>
+                {c}
+              </span>
+            ))}
+          </p>
+        </div>
       </Section>
       <div className={`${column} flex items-center justify-between py-6 text-sm text-ink-subtle`}>
         <Wordmark />
