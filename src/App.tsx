@@ -13,6 +13,25 @@ const delay = (ms: number): CSSProperties => ({ animationDelay: `${ms}ms` })
 const stagger = (i: number): CSSProperties =>
   ({ '--stagger': `${Math.min(i, 6) * 80}ms` }) as CSSProperties
 
+// Display type set one word per span, so each word can carry its own delay.
+function Words({
+  text,
+  className,
+  style,
+}: {
+  text: string
+  className: string
+  style: (i: number) => CSSProperties
+}) {
+  return text.split(' ').map((w, i) => (
+    <span key={i}>
+      <span className={className} style={style(i)}>
+        {w}
+      </span>{' '}
+    </span>
+  ))
+}
+
 export function App() {
   useReveal()
   return (
@@ -87,16 +106,17 @@ function Label({
   )
 }
 
-// Section opener: a numbered mono label over a display heading.
+// Section opener: a numbered mono label over a display heading whose words
+// fill with ink one after another as the block scrolls into view.
 function Heading({
   n,
   label,
-  children,
+  title,
   sub,
 }: {
   n: string
   label: string
-  children: ReactNode
+  title: string
   sub?: string
 }) {
   return (
@@ -104,7 +124,9 @@ function Heading({
       <Label className="mb-4">
         {n} — {label}
       </Label>
-      <h2 className="font-display text-2xl tracking-[-0.02em] text-ink sm:text-3xl">{children}</h2>
+      <h2 className="font-display text-2xl tracking-[-0.02em] sm:text-3xl">
+        <Words text={title} className="ink" style={stagger} />
+      </h2>
       {sub && <p className="mt-4 text-md text-ink-muted">{sub}</p>}
     </div>
   )
@@ -208,19 +230,19 @@ function Hero() {
           <Label className="row-in mb-6">Cloud CAD workstations for Mac</Label>
           {/* Sized to the viewport so "Run CAD on a Mac" holds one line on a phone. */}
           <h1 className="font-display text-[clamp(36px,10vw,60px)] leading-[1.04] tracking-[-0.02em] text-ink">
-            <span className="line-reveal">
-              <span>Run CAD on a Mac</span>
+            <span className="block">
+              <Words text="Run CAD on a Mac" className="blur-in" style={(i) => delay(i * 70)} />
             </span>
-            <span className="line-reveal">
-              <span style={delay(90)}>that can&rsquo;t.</span>
+            <span className="block">
+              <Words text={'that can’t.'} className="blur-in" style={(i) => delay(280 + i * 70)} />
             </span>
           </h1>
-          <p className="row-in mt-6 max-w-lg text-md text-ink-muted" style={delay(220)}>
+          <p className="row-in mt-6 max-w-lg text-md text-ink-muted" style={delay(420)}>
             meshrun provisions a GPU workstation in the cloud, with your CAD package installed and
             licensed, and streams it to your laptop. Minutes to a working session, no cloud vocabulary,
             and no bill that keeps running after you close the lid.
           </p>
-          <div className="row-in mt-8 flex flex-wrap gap-3" style={delay(320)}>
+          <div className="row-in mt-8 flex flex-wrap gap-3" style={delay(520)}>
             <Button variant="primary" size="lg" disabled>
               Request a demo
             </Button>
@@ -228,7 +250,7 @@ function Hero() {
               How it works
             </LinkButton>
           </div>
-          <Label className="row-in mt-8" style={delay(420)}>
+          <Label className="row-in mt-8" style={delay(600)}>
             Per-second billing · Auto-stop · Native Mac app
           </Label>
         </div>
@@ -266,9 +288,7 @@ function Ticker() {
 function Claims() {
   return (
     <Section className="py-20 sm:py-28">
-      <Heading n="01" label="Why meshrun" sub="Three things a bare GPU machine leaves you to do yourself.">
-        Built for CAD, not for cloud admins.
-      </Heading>
+      <Heading n="01" label="Why meshrun" sub="Three things a bare GPU machine leaves you to do yourself." title="Built for CAD, not for cloud admins." />
       <ul className="mt-12 grid gap-4 sm:grid-cols-3">
         {claims.map((c, i) => (
           <li
@@ -292,9 +312,7 @@ function HowItWorks() {
   return (
     <Section id="how" className="py-20 sm:py-28">
       <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
-        <Heading n="02" label="How it works" sub="Three steps from a laptop that can't to a session that can.">
-          Sign in. Pick a workstation. Draw.
-        </Heading>
+        <Heading n="02" label="How it works" sub="Three steps from a laptop that can't to a session that can." title="Sign in. Pick a workstation. Draw." />
         <ol className="rounded-md border border-hairline bg-surface">
           {steps.map((s, i) => (
             <li
@@ -318,9 +336,7 @@ function HowItWorks() {
 function Pricing() {
   return (
     <Section id="pricing" className="py-20 sm:py-28">
-      <Heading n="03" label="Pricing" sub="Three workstation classes. Pay per second while one is running; nothing while it is stopped.">
-        Three classes of workstation.
-      </Heading>
+      <Heading n="03" label="Pricing" sub="Three workstation classes. Pay per second while one is running; nothing while it is stopped." title="Three classes of workstation." />
       <ul className="mt-12 grid gap-4 sm:grid-cols-3">
         {tiers.map((t, i) => (
           <li
@@ -381,7 +397,7 @@ function Faq() {
   return (
     <Section id="faq" className="py-20 sm:py-28">
       <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
-        <Heading n="04" label="FAQ">Questions, before you ask for a demo.</Heading>
+        <Heading n="04" label="FAQ" title="Questions, before you ask for a demo." />
         <div className="border-t border-hairline">
           {faq.map((f, i) => (
             <details

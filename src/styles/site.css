@@ -265,14 +265,6 @@
 /* ---------------------------------------------------------------------------
    Motion.
    --------------------------------------------------------------------------- */
-@keyframes line-up {
-  from {
-    transform: translateY(110%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
 @keyframes row-in {
   from {
     opacity: 0;
@@ -336,14 +328,27 @@
   animation: menu-in var(--dur-base) var(--ease-expressive) both;
 }
 
-/* Display type only: each line sits in its own overflow-hidden box and slides
-   up from below. Body copy never does this — it just appears. */
-@utility line-reveal {
-  display: block;
-  overflow: hidden;
-  & > span {
-    display: block;
-    animation: line-up var(--dur-reveal) var(--ease-expressive) both;
+/* Display type only: each word resolves out of a blur, staggered with an
+   inline animation-delay. Body copy never does this — it just appears. */
+@keyframes blur-in {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(6px);
+  }
+}
+@utility blur-in {
+  display: inline-block;
+  animation: blur-in var(--dur-reveal) var(--ease-expressive) both;
+}
+
+/* Section headlines fill from grey to ink word by word as they scroll in.
+   Hangs off .reveal.pre, so a missing observer leaves them plain ink. */
+@utility ink {
+  color: var(--color-ink);
+  transition: color var(--dur-slow) var(--ease-standard) var(--stagger, 0ms);
+  .reveal.pre & {
+    color: var(--color-ink-subtle);
   }
 }
 
