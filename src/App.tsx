@@ -91,7 +91,9 @@ function Ruled({
 }) {
   const List = ordered ? "ol" : "ul";
   return (
-    <div className={`relative ${className}`}>
+    // self-start: as a grid child the wrapper would stretch to the row and
+    // carry the crosses past the box's corners.
+    <div className={`relative self-start ${className}`}>
       <Crosses all />
       <List className={`ruled ${cols}`}>{children}</List>
     </div>
@@ -169,6 +171,15 @@ const icons = {
   stop: "M8 14.5a6.5 6.5 0 1 1 0-13 6.5 6.5 0 0 1 0 13ZM5.5 5.5h5v5h-5z",
   mac: "M2.5 3.5h11v7h-11zM1 13h14M6.5 13v-2.5h3V13",
 };
+
+// The hover outline of a ruled cell; the `ruled` utility plots it.
+function Outline() {
+  return (
+    <svg aria-hidden className="trace">
+      <rect x="0.5" y="0.5" width="100%" height="100%" pathLength={1} />
+    </svg>
+  );
+}
 
 function Icon({ name }: { name: keyof typeof icons }) {
   return (
@@ -356,6 +367,7 @@ function Claims() {
       <Ruled className="mt-12" cols="sm:grid-cols-3">
         {claims.map((c, i) => (
           <li key={c.title} style={stagger(i)} className="reveal p-6">
+            <Outline />
             <span className="text-accent">
               <Icon name={c.icon} />
             </span>
@@ -395,6 +407,7 @@ function HowItWorks() {
               style={stagger(i)}
               className="reveal grid grid-cols-[3rem_1fr] gap-4 p-6"
             >
+              <Outline />
               <span className="font-mono text-sm text-accent tabular-nums">
                 0{i + 1}
               </span>
@@ -426,8 +439,9 @@ function Pricing() {
           <li
             key={t.name}
             style={stagger(i)}
-            className={`reveal relative flex flex-col p-6 ${t.featured ? "featured order-first sm:order-0" : ""}`}
+            className={`reveal flex flex-col p-6 ${t.featured ? "featured order-first sm:order-0" : ""}`}
           >
+            <Outline />
             {t.featured && (
               <Label className="absolute -top-2 left-5 bg-bg px-1.5 text-accent">
                 Most popular
@@ -553,7 +567,7 @@ function Footer() {
     <footer>
       {/* Tagline and link columns above the wordmark, set across the whole
           column width; then the bottom rule, then a one-line legal bar. */}
-      <Section className="py-12 sm:py-16">
+      <Section className="pt-12 pb-6 sm:pt-16 sm:pb-8">
         <div className="flex flex-col gap-10 sm:flex-row sm:justify-between">
           <p className="font-display text-xl tracking-[-0.02em] text-ink sm:text-2xl">
             Cloud CAD workstations for Mac.
@@ -591,11 +605,16 @@ function Footer() {
             ))}
           </p>
         </div>
-        <div className="mt-6 flex items-center justify-between text-sm text-ink-subtle">
+      </Section>
+      <div
+        className={`${column} flex items-center justify-between py-6 text-sm text-ink-subtle`}
+      >
+        <Wordmark />
+        <div className="flex items-center gap-6">
           <span>© 2026 meshrun</span>
           <ThemeToggle />
         </div>
-      </Section>
+      </div>
     </footer>
   );
 }
