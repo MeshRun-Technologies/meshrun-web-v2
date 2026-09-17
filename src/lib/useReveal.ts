@@ -1,15 +1,12 @@
-import { useCallback, useRef } from 'react'
+import { useEffect } from 'react'
 
-// Scroll reveal for a scroller's `.reveal` children. Returns a callback ref for
-// the scrolling element. Children are visible by default and only hidden once
-// the observer is confirmed running, so a failure leaves readable content.
+// Scroll reveal for every `.reveal` on the page. Elements are visible by
+// default and only hidden once the observer is confirmed running, so a failure
+// leaves readable content. Anything already in the viewport is never hidden,
+// so the first paint is complete and nothing pops in above the fold.
 export function useReveal() {
-  const observer = useRef<IntersectionObserver | null>(null)
-
-  return useCallback((el: HTMLElement | null) => {
-    observer.current?.disconnect()
-    observer.current = null
-    if (!el || typeof IntersectionObserver === 'undefined') return
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return
 
     const io = new IntersectionObserver(
       (entries) => {
@@ -19,12 +16,13 @@ export function useReveal() {
           io.unobserve(entry.target)
         }
       },
-      { root: el, threshold: 0.15 },
+      { threshold: 0.15, rootMargin: '0px 0px -8% 0px' },
     )
-    el.querySelectorAll<HTMLElement>('.reveal').forEach((node) => {
+    document.querySelectorAll<HTMLElement>('.reveal').forEach((node) => {
+      if (node.getBoundingClientRect().top < innerHeight) return
       node.classList.add('pre')
       io.observe(node)
     })
-    observer.current = io
+    return () => io.disconnect()
   }, [])
 }
