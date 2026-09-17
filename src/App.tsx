@@ -1,12 +1,17 @@
 import type { CSSProperties, ReactNode } from 'react'
 
 import { Button, LinkButton } from './components/Button'
+import { cad, claims, steps } from './content'
 import { Wordmark } from './components/Wordmark'
 import { Workstation } from './components/Workstation'
 import { useReveal } from './lib/useReveal'
 import { useTheme } from './lib/useTheme'
 
 const delay = (ms: number): CSSProperties => ({ animationDelay: `${ms}ms` })
+
+// Sibling stagger for `reveal` children; capped so a long list never lags.
+const stagger = (i: number): CSSProperties =>
+  ({ '--stagger': `${Math.min(i, 6) * 80}ms` }) as CSSProperties
 
 export function App() {
   useReveal()
@@ -15,6 +20,9 @@ export function App() {
       <Nav />
       <main>
         <Hero />
+        <Ticker />
+        <Claims />
+        <HowItWorks />
       </main>
     </>
   )
@@ -72,6 +80,54 @@ function Label({
     >
       {children}
     </p>
+  )
+}
+
+// Section opener: a numbered mono label over a display heading.
+function Heading({
+  n,
+  label,
+  children,
+  sub,
+}: {
+  n: string
+  label: string
+  children: ReactNode
+  sub?: string
+}) {
+  return (
+    <div className="reveal max-w-2xl">
+      <Label className="mb-4">
+        {n} — {label}
+      </Label>
+      <h2 className="font-display text-2xl tracking-[-0.02em] text-ink sm:text-3xl">{children}</h2>
+      {sub && <p className="mt-4 text-md text-ink-muted">{sub}</p>}
+    </div>
+  )
+}
+
+// 16px stroke icons in the app's register: 1.5px, square caps, no fills.
+const icons = {
+  cube: 'M8 1.5 14 5v6l-6 3.5L2 11V5l6-3.5ZM2 5l6 3.5L14 5M8 8.5v6',
+  stop: 'M8 14.5a6.5 6.5 0 1 1 0-13 6.5 6.5 0 0 1 0 13ZM5.5 5.5h5v5h-5z',
+  mac: 'M2.5 3.5h11v7h-11zM1 13h14M6.5 13v-2.5h3V13',
+}
+
+function Icon({ name }: { name: keyof typeof icons }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      aria-hidden
+    >
+      <path d={icons[name]} />
+    </svg>
   )
 }
 
@@ -143,7 +199,7 @@ function Nav() {
 function Hero() {
   return (
     <Section>
-      <div className="grid min-h-[70svh] items-center gap-12 py-20 sm:py-28 lg:grid-cols-[1.15fr_1fr]">
+      <div className="grid min-h-[70svh] items-center gap-12 py-20 sm:py-28 lg:grid-cols-[1.5fr_1fr]">
         <div>
           <Label className="row-in mb-6">Cloud CAD workstations for Mac</Label>
           <h1 className="font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
@@ -171,7 +227,84 @@ function Hero() {
             Per-second billing · Auto-stop · Native Mac app
           </Label>
         </div>
-        <Workstation className="w-48 justify-self-center text-ink-subtle sm:w-64 lg:w-80 lg:justify-self-end" />
+        <Workstation className="w-48 justify-self-center text-ink-subtle sm:w-64 lg:w-72 lg:justify-self-end" />
+      </div>
+    </Section>
+  )
+}
+
+// The inspiration's "trusted by" strip, minus the endorsement: the packages
+// a workstation arrives with. The track is rendered twice for the loop.
+function Ticker() {
+  const track = (hidden: boolean) => (
+    <ul aria-hidden={hidden || undefined} className="flex shrink-0 gap-12 pr-12">
+      {cad.map((name) => (
+        <li key={name} className="font-display text-lg whitespace-nowrap text-ink-subtle">
+          {name}
+        </li>
+      ))}
+    </ul>
+  )
+  return (
+    <Section className="py-8">
+      <Label className="reveal mb-5">Runs the CAD stack you already use</Label>
+      <div className="reveal overflow-hidden mask-[linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
+        <div className="ticker">
+          {track(false)}
+          {track(true)}
+        </div>
+      </div>
+    </Section>
+  )
+}
+
+function Claims() {
+  return (
+    <Section className="py-20 sm:py-28">
+      <Heading n="01" label="Why meshrun" sub="A workstation for CAD, not a bare machine you have to finish yourself.">
+        Open the assembly your Mac can&rsquo;t.
+      </Heading>
+      <ul className="mt-12 grid gap-4 sm:grid-cols-3">
+        {claims.map((c, i) => (
+          <li
+            key={c.title}
+            style={stagger(i)}
+            className="reveal rounded-md border border-hairline bg-surface p-6 transition-colors duration-(--dur-fast) hover:border-hairline-strong"
+          >
+            <span className="text-accent">
+              <Icon name={c.icon} />
+            </span>
+            <h3 className="mt-5 font-display text-lg tracking-[-0.02em] text-ink">{c.title}</h3>
+            <p className="mt-2 text-base text-ink-muted">{c.body}</p>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  )
+}
+
+function HowItWorks() {
+  return (
+    <Section id="how" className="py-20 sm:py-28">
+      <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
+        <Heading n="02" label="How it works" sub="Three steps from a laptop that can't to a session that can.">
+          Sign in. Pick a workstation. Draw.
+        </Heading>
+        <ol className="rounded-md border border-hairline bg-surface">
+          {steps.map((s, i) => (
+            <li
+              key={s.title}
+              style={stagger(i)}
+              className={`reveal grid grid-cols-[3rem_1fr] gap-4 p-6 ${i < steps.length - 1 ? 'rule-draw' : ''}`}
+            >
+              <span className="font-mono text-sm text-accent tabular-nums">0{i + 1}</span>
+              <div>
+                <h3 className="font-display text-lg tracking-[-0.02em] text-ink">{s.title}</h3>
+                <p className="mt-1 text-base text-ink-muted">{s.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
       </div>
     </Section>
   )
