@@ -117,6 +117,12 @@
   html {
     /* Native smooth anchor scrolling. */
     scroll-behavior: smooth;
+    /* No visible scrollbar: the rails are the only vertical lines on the page.
+       Wheel, trackpad and keys still scroll. */
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   body {
@@ -443,10 +449,11 @@
   & > li:hover {
     background: var(--color-surface);
   }
-  /* Hover outline, plotted rather than switched on: the rect's dash grows
-     from the top-left corner in both directions at once and closes at the
-     bottom-right. pathLength=1 makes the whole perimeter one unit, so the
-     dash length and its half-offset can both be transitioned. */
+  /* Hover outline, plotted rather than switched on. pathLength=1 makes the
+     perimeter one unit; the pattern is dash, gap, dash, gap summing to 1, so
+     one dash grows from the top-left corner clockwise and the other grows
+     back from the same corner anticlockwise (the end of the path), and the
+     two meet at the bottom-right with the whole border drawn. */
   & > li > .trace {
     position: absolute;
     inset: 0;
@@ -459,15 +466,11 @@
     fill: none;
     stroke: var(--color-ink);
     stroke-width: 1;
-    stroke-dasharray: 0 1;
-    stroke-dashoffset: 0;
-    transition:
-      stroke-dasharray var(--dur-reveal) var(--ease-expressive),
-      stroke-dashoffset var(--dur-reveal) var(--ease-expressive);
+    stroke-dasharray: 0 1 0 0;
+    transition: stroke-dasharray var(--dur-reveal) var(--ease-expressive);
   }
   & > li:hover > .trace rect {
-    stroke-dasharray: 1 1;
-    stroke-dashoffset: 0.5;
+    stroke-dasharray: 0.5 0 0.5 0;
   }
   /* The recommendation hands over to whichever cell is under the cursor. */
   &:hover > li.featured:not(:hover) {

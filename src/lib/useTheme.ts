@@ -30,7 +30,9 @@ export function useTheme() {
     apply(appearance)
     if (appearance !== 'system') return
     const mq = matchMedia(QUERY)
-    const onChange = () => apply('system')
+    // Reads storage, not this instance's state: two toggles on the page each
+    // hold their own copy, and only storage is shared between them.
+    const onChange = () => apply(stored())
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
   }, [appearance])
@@ -42,6 +44,9 @@ export function useTheme() {
     } catch {
       /* applies for this run only */
     }
+    // Apply directly as well: another instance may have moved the page on
+    // since this one's state last changed, in which case setState is a no-op.
+    apply(next)
     setState(next)
   }
 
