@@ -454,11 +454,13 @@
      one dash grows from the top-left corner clockwise and the other grows
      back from the same corner anticlockwise (the end of the path), and the
      two meet at the bottom-right with the whole border drawn. */
+  /* Inset half a pixel so the 1px stroke lands exactly on the featured
+     cell's inset rule, not a hair outside it. */
   & > li > .trace {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0.5px;
+    width: calc(100% - 1px);
+    height: calc(100% - 1px);
     overflow: visible;
     pointer-events: none;
   }
@@ -472,6 +474,10 @@
   }
   & > li:hover > .trace rect {
     stroke-dasharray: 0.5 0 0.5 0;
+  }
+  /* The featured cell is already outlined; nothing to draw over it. */
+  & > li.featured:hover > .trace rect {
+    stroke-dasharray: 0 1 0 0;
   }
   /* The recommendation hands over to whichever cell is under the cursor. */
   &:hover > li.featured:not(:hover) {

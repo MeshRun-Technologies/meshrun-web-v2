@@ -5,6 +5,7 @@ import { cad, claims, faq, steps, tiers } from "./content";
 import { Stream } from "./components/Stream";
 import { Wordmark } from "./components/Wordmark";
 import { Workstation } from "./components/Workstation";
+import { useGlide } from "./lib/useGlide";
 import { useReveal } from "./lib/useReveal";
 import { useTheme } from "./lib/useTheme";
 
@@ -35,6 +36,7 @@ function Words({
 
 export function App() {
   useReveal();
+  useGlide();
   return (
     <>
       <Nav />
@@ -176,7 +178,7 @@ const icons = {
 function Outline() {
   return (
     <svg aria-hidden className="trace">
-      <rect x="0.5" y="0.5" width="100%" height="100%" pathLength={1} />
+      <rect width="100%" height="100%" pathLength={1} />
     </svg>
   );
 }
