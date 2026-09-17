@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 
 import { Button, LinkButton } from './components/Button'
 import { cad, claims, faq, steps, tiers } from './content'
@@ -190,11 +190,32 @@ function ThemeToggle() {
   )
 }
 
+// True while any of the hero is on screen below the nav's own 44px band. No
+// scroll listener: the observer fires only when the hero crosses that line.
+function useHeroInView() {
+  const [inView, setInView] = useState(true)
+  useEffect(() => {
+    const hero = document.getElementById('hero')
+    if (!hero || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), {
+      rootMargin: '-44px 0px 0px 0px',
+    })
+    io.observe(hero)
+    return () => io.disconnect()
+  }, [])
+  return inView
+}
+
+// Bare: no fill, no rule. It floats over the hero and leaves with it.
 function Nav() {
+  const show = useHeroInView()
   return (
-    <header className="rule-bleed sticky top-0 z-20 bg-bg/85 backdrop-blur">
+    <header
+      className={`fixed inset-x-0 top-0 z-20 transition-[transform,opacity] duration-(--dur-base) ease-expressive ${
+        show ? '' : '-translate-y-full opacity-0 pointer-events-none'
+      }`}
+    >
       <div className={`${column} grid h-11 grid-cols-[1fr_auto_1fr] items-center`}>
-        <Crosses />
         <Wordmark />
         <nav className="hidden gap-6 text-sm text-ink-muted sm:flex">
           {[
@@ -224,7 +245,9 @@ function Nav() {
 
 function Hero() {
   return (
-    <Section>
+    // pt-11 clears the fixed nav inside the railed column, so the rails run
+    // unbroken from the top of the page.
+    <Section id="hero" className="pt-11">
       <div className="grid items-center gap-12 py-20 sm:py-28 lg:grid-cols-[1.5fr_1fr]">
         <div>
           <Label className="row-in mb-6">Cloud CAD workstations for Mac</Label>
