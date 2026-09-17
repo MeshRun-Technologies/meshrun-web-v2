@@ -20,7 +20,7 @@ export function useGlide() {
         return
       }
       // ponytail: fixed lerp, frame-rate dependent; scale by dt if it ever matters.
-      scrollTo(0, y + gap * 0.12)
+      scrollTo(0, y + gap * 0.07)
       raf = requestAnimationFrame(step)
     }
 
