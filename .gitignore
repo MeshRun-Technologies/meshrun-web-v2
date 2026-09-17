@@ -4,10 +4,13 @@ dist-ssr
 *.local
 .vite
 .DS_Store
+
+# Per-machine agent settings.
 .claude/settings.local.json
+CLAUDE.md
 
-# Local agent notes, untracked for now.
-
-# Impeccable live-mode session state (config.json is tracked).
+# Impeccable: design.json and live/config.json are tracked; caches and
+# session journals are not.
+.impeccable/hook.cache.json
 .impeccable/live/inject-journal.json
 .impeccable/config.local.json
