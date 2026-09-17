@@ -320,7 +320,10 @@ function Hero() {
             Per-second billing · Auto-stop · Native Mac app
           </Label>
         </div>
-        <Workstation className="w-48 justify-self-center text-ink-subtle sm:w-64 lg:w-72 lg:justify-self-end" />
+        <Workstation
+          dimensioned
+          className="w-48 justify-self-center text-ink-subtle sm:w-64 lg:w-72 lg:justify-self-end"
+        />
       </div>
     </Section>
   );
@@ -609,11 +612,25 @@ function Footer() {
         </div>
       </Section>
       <div
-        className={`${column} flex items-center justify-between py-6 text-sm text-ink-subtle`}
+        className={`${column} flex flex-col gap-6 py-6 sm:flex-row sm:items-center sm:justify-between`}
       >
         <Wordmark />
         <div className="flex items-center gap-6">
-          <span>© 2026 meshrun</span>
+          {/* The sheet's title block, where every drawing signs off. */}
+          <dl className="flex divide-x divide-hairline border border-hairline font-mono text-xs tabular-nums">
+            {[
+              ["Drawn", "© 2026 meshrun"],
+              ["Scale", "1:1"],
+              ["Sheet", "1 / 1"],
+            ].map(([k, v]) => (
+              <div key={k} className="px-3 py-1.5">
+                <dt className="text-2xs tracking-wide text-ink-subtle uppercase">
+                  {k}
+                </dt>
+                <dd className="text-ink-muted">{v}</dd>
+              </div>
+            ))}
+          </dl>
           <ThemeToggle />
         </div>
       </div>

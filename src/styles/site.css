@@ -111,6 +111,7 @@
     --dur-fast: 150ms; /* colour transitions */
     --dur-base: 220ms; /* list rows, tab switch, meter fill */
     --dur-slow: 380ms; /* scroll reveal, route transitions */
+    --dur-scroll: 700ms; /* visible section entrances */
     --dur-reveal: 620ms; /* display-type line reveal */
   }
 
@@ -242,7 +243,7 @@
     height: 1px;
     background: var(--color-hairline);
     transform-origin: left;
-    transition: transform var(--dur-slow) var(--ease-expressive);
+    transition: transform var(--dur-scroll) var(--ease-expressive);
   }
   &.pre::after {
     transform: scaleX(0);
@@ -257,6 +258,11 @@
     stroke-dasharray: 1;
     stroke-dashoffset: 1;
     animation: plot var(--dur-reveal) var(--ease-standard) both;
+  }
+  /* Dimension figures have no stroke to draw; they fade in after their line. */
+  & text {
+    opacity: 0;
+    animation: plot-fade var(--dur-base) var(--ease-standard) both;
   }
   /* Dashed strokes can't be drawn by offset; they fade in after the solid ones. */
   & .dashed {
@@ -350,7 +356,8 @@
 /* A plotted drawing inside a reveal waits for the observer: its strokes hold
    at zero until .pre is lifted, then the plot animation starts from there. */
 .reveal.pre .plot path,
-.reveal.pre .plot circle {
+.reveal.pre .plot circle,
+.reveal.pre .plot text {
   animation: none;
 }
 
@@ -377,14 +384,15 @@
    observer is confirmed running, so a failure leaves readable content. */
 @utility reveal {
   transition:
-    opacity var(--dur-slow) var(--ease-expressive),
-    transform var(--dur-slow) var(--ease-expressive);
+    opacity var(--dur-scroll) var(--ease-expressive),
+    transform var(--dur-scroll) var(--ease-expressive);
   /* Siblings stagger with an inline --stagger; the delay only applies on the
      way in, so nothing lags when the observer is absent. */
   transition-delay: var(--stagger, 0ms);
   &.pre {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(32px);
+    transition-delay: 0ms;
   }
 }
 
@@ -436,8 +444,8 @@
     position: relative;
     background: var(--color-bg);
     transition:
-      opacity var(--dur-slow) var(--ease-expressive) var(--stagger, 0ms),
-      transform var(--dur-slow) var(--ease-expressive) var(--stagger, 0ms),
+      opacity var(--dur-scroll) var(--ease-expressive) var(--stagger, 0ms),
+      transform var(--dur-scroll) var(--ease-expressive) var(--stagger, 0ms),
       background-color var(--dur-base) var(--ease-expressive),
       box-shadow var(--dur-base) var(--ease-expressive),
       filter var(--dur-base) var(--ease-expressive);
@@ -578,6 +586,9 @@
   }
   .reveal.pre {
     opacity: 1;
+    transform: none;
+  }
+  .lift.pre > span {
     transform: none;
   }
   html,
