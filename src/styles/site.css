@@ -115,9 +115,8 @@
   }
 
   html {
-    /* Native smooth anchor scrolling; the sticky nav is 44px. */
+    /* Native smooth anchor scrolling. */
     scroll-behavior: smooth;
-    scroll-padding-top: 44px;
   }
 
   body {
@@ -342,23 +341,6 @@
   animation: blur-in var(--dur-reveal) var(--ease-expressive) both;
 }
 
-/* The nav thins out as the page scrolls, driven by scroll position itself so
-   it tracks the thumb in both directions. Gone by 40vh; hidden, not just
-   transparent, so nothing behind it is blocked. Browsers without scroll
-   timelines simply keep the nav. */
-@keyframes nav-fade {
-  to {
-    opacity: 0;
-    transform: translateY(-8px);
-    visibility: hidden;
-  }
-}
-@utility nav-fade {
-  animation: nav-fade linear both;
-  animation-timeline: scroll(root);
-  animation-range: 0 40vh;
-}
-
 /* A plotted drawing inside a reveal waits for the observer: its strokes hold
    at zero until .pre is lifted, then the plot animation starts from there. */
 .reveal.pre .plot path,
@@ -468,8 +450,32 @@
   }
 }
 
-/* FAQ chevron: rotates when the native <details> opens. No JS. */
+/* FAQ row. The answer's height eases open through ::details-content and the
+   answer itself settles in a beat later; the chevron rotates. No JS. Browsers
+   without interpolate-size snap open, as <details> always has. */
 @utility disclosure {
+  interpolate-size: allow-keywords;
+  &::details-content {
+    height: 0;
+    overflow: clip;
+    transition:
+      height var(--dur-base) var(--ease-expressive),
+      content-visibility var(--dur-base) allow-discrete;
+  }
+  &[open]::details-content {
+    height: auto;
+  }
+  & > p {
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+      opacity var(--dur-base) var(--ease-standard),
+      transform var(--dur-base) var(--ease-expressive);
+  }
+  &[open] > p {
+    opacity: 1;
+    transform: none;
+  }
   & summary {
     list-style: none;
   }
