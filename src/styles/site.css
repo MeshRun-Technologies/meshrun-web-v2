@@ -121,6 +121,12 @@
     /* No visible scrollbar: the rails are the only vertical lines on the page.
        Wheel, trackpad and keys still scroll. */
     scrollbar-width: none;
+    /* `clip`, not `hidden`. Overflow set on the body alone propagates to the
+       viewport and leaves the body itself unclipped, so on a phone the rules
+       bleeding 100vw either side widen the initial containing block — which a
+       fixed bar then sizes itself to. `clip` on the root clips them where they
+       are, keeps the vertical axis visible, and creates no scroll container. */
+    overflow-x: clip;
     &::-webkit-scrollbar {
       display: none;
     }
@@ -134,7 +140,7 @@
     line-height: var(--text-base--line-height);
     -webkit-font-smoothing: antialiased;
     /* Bleeding rules extend 100vw past the column; clip them at the page. */
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   :focus-visible {
@@ -274,6 +280,51 @@
 }
 
 /* ---------------------------------------------------------------------------
+   The landing sheet.
+   A field of dimensioned drawings behind the hook. The same pen as `plot`, but
+   the sheet's own opacities are driven per frame from JS, so the stroke is set
+   on each line rather than on a container that would also catch the solid
+   silhouettes underneath.
+   --------------------------------------------------------------------------- */
+.sheet-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: plot var(--dur-reveal) var(--ease-standard) both;
+}
+
+/* Clears the middle of the sheet so the hook sits on paper, and lifts a lens
+   of it back wherever the pointer is working. Two mask layers, added. */
+.sheet-mask {
+  mask-image:
+    radial-gradient(
+      circle var(--lens-r, 0px) at var(--lens-x, 50%) var(--lens-y, 50%),
+      #000 0%,
+      rgba(0, 0, 0, 0.6) 52%,
+      transparent 100%
+    ),
+    radial-gradient(
+      ellipse 46% 38% at 50% 47%,
+      transparent 0%,
+      transparent 30%,
+      rgba(0, 0, 0, 0.05) 52%,
+      rgba(0, 0, 0, 0.3) 74%,
+      rgba(0, 0, 0, 0.68) 88%,
+      #000 100%
+    );
+  mask-composite: add;
+}
+
+/* The one warm wash on the page: the accent, at the threshold of visible,
+   pooled behind the hook. */
+.sheet-wash {
+  background: radial-gradient(
+    ellipse 75% 68% at 50% 44%,
+    color-mix(in oklab, var(--color-accent) 5%, transparent),
+    transparent 72%
+  );
+}
+
+/* ---------------------------------------------------------------------------
    Motion.
    --------------------------------------------------------------------------- */
 @keyframes row-in {
@@ -339,6 +390,53 @@
   animation: menu-in var(--dur-base) var(--ease-expressive) both;
 }
 
+/* ---------------------------------------------------------------------------
+   Full-screen menu.
+   The sheet is pulled down from the top edge and retracts the same way, and
+   the rows ride in under it. Closing rewinds it: the rows lift away first,
+   then the sheet goes back up.
+   --------------------------------------------------------------------------- */
+@keyframes veil {
+  /* Starts at the height of the bar it replaces, so the menu's own row is
+     right in the first painted frame instead of the bar showing through it. */
+  from {
+    clip-path: inset(0 0 calc(100% - 2.75rem) 0);
+  }
+}
+@utility veil {
+  animation: veil var(--dur-reveal) var(--ease-standard) both;
+}
+
+@keyframes veil-out {
+  to {
+    clip-path: inset(0 0 100% 0);
+  }
+}
+@utility veil-out {
+  /* Held back so the rows are gone before the sheet starts to retract. */
+  animation: veil-out var(--dur-slow) var(--ease-standard) 110ms both;
+}
+
+@keyframes veil-row {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+}
+@utility veil-row {
+  animation: veil-row var(--dur-reveal) var(--ease-expressive) both;
+}
+
+@keyframes veil-row-out {
+  to {
+    opacity: 0;
+    transform: translateY(-22px);
+  }
+}
+@utility veil-row-out {
+  animation: veil-row-out var(--dur-base) var(--ease-standard) both;
+}
+
 /* Display type only: each word resolves out of a blur, staggered with an
    inline animation-delay. Body copy never does this — it just appears. */
 @keyframes blur-in {
@@ -351,6 +449,19 @@
 @utility blur-in {
   display: inline-block;
   animation: blur-in var(--dur-reveal) var(--ease-expressive) both;
+}
+
+/* The product cell swapping its contents: the same resolve as display type,
+   but on a flex row, so it cannot borrow `blur-in`'s inline-block. */
+@keyframes pill-in {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(0.4em);
+  }
+}
+@utility pill-in {
+  animation: pill-in var(--dur-base) var(--ease-expressive) both;
 }
 
 /* A plotted drawing inside a reveal waits for the observer: its strokes hold
@@ -497,6 +608,33 @@
   }
 }
 
+/* The trade rows. Each is the same decision seen twice: the cost lifts away
+   and the gain rises into its place. Hover drives it where there is a pointer;
+   where there is none, an observer sets data-flip as the row passes the middle
+   of the screen. Both states share one grid cell, so nothing reflows. */
+@utility trade {
+  & .was,
+  & .now {
+    transition:
+      opacity var(--dur-slow) var(--ease-expressive),
+      transform var(--dur-slow) var(--ease-expressive);
+  }
+  & .now {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  &:hover .was,
+  &[data-flip='on'] .was {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  &:hover .now,
+  &[data-flip='on'] .now {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* FAQ row. The answer's height eases open through ::details-content and the
    answer itself settles in a beat later; the chevron rotates. No JS. Browsers
    without interpolate-size snap open, as <details> always has. */
@@ -574,6 +712,61 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Controls.
+   --------------------------------------------------------------------------- */
+
+/* A 28px control needs a 44px target on a touch screen. The pad is drawn with
+   a pseudo-element so the control keeps its size and its place in the row. */
+@utility tap {
+  position: relative;
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+  }
+}
+
+/* The appearance toggle spins down to a point, swaps the mark there, and opens
+   back out. Two marks are in the button; only the one for the appearance you
+   would switch to is in the document's flow. */
+@keyframes swap {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  42% {
+    transform: rotate(150deg) scale(0.15);
+  }
+  58% {
+    transform: rotate(210deg) scale(0.15);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+@utility swap {
+  animation: swap var(--dur-reveal) var(--ease-standard);
+}
+
+:root.dark .when-light,
+:root:not(.dark) .when-dark {
+  display: none;
+}
+
+/* The scroll cue's chevron, the page's one idle loop. */
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(-2px);
+  }
+  50% {
+    transform: translateY(2px);
+  }
+}
+@utility bob {
+  animation: bob 2.8s var(--ease-standard) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -595,8 +788,10 @@
   .scroll {
     scroll-behavior: auto;
   }
-  /* A single iteration would still slide the track away; hold it still. */
-  .ticker {
+  /* A single iteration would still slide the track away, or park the chevron
+     off its centre; hold them both still. */
+  .ticker,
+  .bob {
     animation: none !important;
   }
 }
