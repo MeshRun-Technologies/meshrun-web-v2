@@ -2,6 +2,9 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+# Local early access submissions from the dev server.
+.data
 .vite
 .DS_Store
 

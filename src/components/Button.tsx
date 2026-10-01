@@ -37,7 +37,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   return (
-    <button className={`${base} ${sizes[size]} ${variants[variant]} ${className}`} {...props}>
+    <button data-absorb="" data-variant={variant} className={`${base} ${sizes[size]} ${variants[variant]} ${className}`} {...props}>
       {children}
       {arrow && <Arrow />}
     </button>
@@ -54,7 +54,7 @@ export function LinkButton({
   ...props
 }: Look & AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) {
   return (
-    <a className={`${base} ${sizes[size]} ${variants[variant]} ${className}`} {...props}>
+    <a data-absorb="" data-variant={variant} className={`${base} ${sizes[size]} ${variants[variant]} ${className}`} {...props}>
       {children}
       {arrow && <Arrow />}
     </a>

@@ -246,6 +246,7 @@ export const Sheet = memo(function Sheet() {
   return (
     <div ref={rootRef} className="absolute inset-0 bg-bg" aria-hidden>
       <div className="sheet-wash absolute inset-0" />
+      <div className="sheet-grain absolute inset-0" />
 
       <div className="sheet-mask absolute inset-0">
         <SheetArt />

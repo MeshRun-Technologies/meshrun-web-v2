@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "./Button";
+import { openEarlyAccess } from "./EarlyAccess";
 import { column, Crosses } from "./layout";
 import { ThemeToggle } from "./ThemeToggle";
 import { Wordmark } from "./Wordmark";
@@ -199,7 +200,16 @@ function Menu({ closing, onClose }: { closing: boolean; onClose: () => void }) {
                 : `${160 + NAV_LINKS.length * 70}ms`,
             }}
           >
-            <Button variant="primary" size="lg" disabled>
+            {/* Waits for the menu to retract, so its scroll lock is released
+                before the dialog takes its own. */}
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => {
+                onClose();
+                window.setTimeout(openEarlyAccess, MENU_EXIT_MS);
+              }}
+            >
               Request a demo
             </Button>
           </div>
@@ -273,7 +283,7 @@ export function Nav() {
                 the Button's own `inline-flex` are both plain display utilities,
                 so on one element the generated order decides, not the markup. */}
             <span className="hidden sm:inline-flex">
-              <Button variant="primary" disabled>
+              <Button variant="primary" onClick={openEarlyAccess}>
                 Request a demo
               </Button>
             </span>

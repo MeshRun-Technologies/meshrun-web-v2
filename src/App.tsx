@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode, RefObject } from "react";
 
 import { Button, LinkButton } from "./components/Button";
@@ -12,6 +12,8 @@ import {
   trades,
   yours,
 } from "./content";
+import { EarlyAccess, openEarlyAccess } from "./components/EarlyAccess";
+import { Cursor } from "./components/Cursor";
 import { column, Crosses } from "./components/layout";
 import { Nav, NavSentinel } from "./components/Nav";
 import { ProductCycler } from "./components/ProductCycler";
@@ -64,6 +66,8 @@ export function App() {
         <Closing />
       </main>
       <Footer />
+      <EarlyAccess />
+      <Cursor />
     </>
   );
 }
@@ -135,24 +139,11 @@ function Label({
   );
 }
 
-// Section opener: a numbered mono label over a display heading whose words
-// fill with ink one after another as the block scrolls into view.
-function Heading({
-  n,
-  label,
-  title,
-  sub,
-}: {
-  n: string;
-  label: string;
-  title: string;
-  sub?: string;
-}) {
+// Section opener: a display heading whose words fill with ink one after
+// another as the block scrolls into view.
+function Heading({ title, sub }: { title: string; sub?: string }) {
   return (
     <div className="reveal max-w-2xl">
-      <Label className="mb-4">
-        {n} — {label}
-      </Label>
       <h2 className="font-display text-2xl tracking-[-0.02em] sm:text-3xl">
         <Words text={title} className="ink" style={stagger} />
       </h2>
@@ -246,13 +237,11 @@ function Hero() {
   );
 }
 
-// 01 — the measured claims, as a ruled pair of rows.
+// The measured claims, as a ruled pair of rows.
 function Targets() {
   return (
     <Section id="platform" className={band}>
       <Heading
-        n="01"
-        label="Platform"
         title="CAD in the Cloud"
         sub="MeshRun streams full windows CAD from powerful cloud PCs straight to your screen."
       />
@@ -280,51 +269,64 @@ function Targets() {
   );
 }
 
-// 02 — what the product is. One pillar open at a time: `name` on the rows makes
-// the browser close the others, so the accordion needs no state of its own.
+// What the product is. Whichever pillar you are on opens and takes the raised
+// surface; the rest fold to their title. Height eases through
+// grid-template-rows, so it moves from the real content height.
 function Pillars() {
+  const [active, setActive] = useState(0);
+
   return (
     <Section id="experience" className={band}>
       <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
         <Heading
-          n="02"
-          label="Experience"
           title="What We Deliver"
           sub="Not a clunky band-aid solution. Just your apps running cleanly on Mac."
         />
         <div className="border-t border-hairline">
-          {pillars.map((p, i) => (
-            <details
-              key={p.title}
-              name="pillar"
-              open={i === 0}
-              style={stagger(i)}
-              className="disclosure reveal group border-b border-hairline"
-            >
-              <summary className="flex cursor-pointer items-center gap-4 py-5 text-ink transition-colors duration-(--dur-fast) hover:text-accent">
-                <span className="text-accent">
-                  <Icon name={p.icon} />
-                </span>
-                <h3 className="flex-1 font-display text-lg tracking-[-0.02em]">
-                  {p.title}
-                </h3>
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="square"
-                  aria-hidden
-                  className="shrink-0 text-ink-subtle"
+          {pillars.map((p, i) => {
+            const on = i === active;
+            return (
+              <button
+                key={p.title}
+                type="button"
+                aria-expanded={on}
+                onMouseEnter={() => setActive(i)}
+                onFocus={() => setActive(i)}
+                onClick={() => setActive(i)}
+                style={stagger(i)}
+                className={`reveal block w-full border-b border-hairline px-4 py-5 text-left transition-colors duration-(--dur-slow) ease-(--ease-expressive) ${
+                  on ? "bg-raised" : "bg-transparent"
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <span
+                    className={`transition-colors duration-(--dur-slow) ${
+                      on ? "text-accent" : "text-ink-subtle"
+                    }`}
+                  >
+                    <Icon name={p.icon} />
+                  </span>
+                  <h3
+                    className={`font-display text-lg tracking-[-0.02em] transition-colors duration-(--dur-slow) ${
+                      on ? "text-ink" : "text-ink-muted"
+                    }`}
+                  >
+                    {p.title}
+                  </h3>
+                </div>
+                <div
+                  className="grid transition-[grid-template-rows] duration-(--dur-slow) ease-(--ease-expressive)"
+                  style={{ gridTemplateRows: on ? "1fr" : "0fr" }}
                 >
-                  <path d="M8 3v10M3 8h10" />
-                </svg>
-              </summary>
-              <p className="pb-5 pl-9 text-base text-ink-muted">{p.body}</p>
-            </details>
-          ))}
+                  <div className="overflow-hidden">
+                    <p className="pt-3 pl-9 text-base text-ink-muted">
+                      {p.body}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </Section>
@@ -356,7 +358,7 @@ function useFlipOnPass(ref: RefObject<HTMLUListElement | null>) {
   }, [ref]);
 }
 
-// 03 — the trade, one row at a time: what buying costs, what renting returns.
+// The trade, one row at a time: what buying costs, what renting returns.
 function Cost() {
   const listRef = useRef<HTMLUListElement>(null);
   useFlipOnPass(listRef);
@@ -364,8 +366,6 @@ function Cost() {
   return (
     <Section id="how" className={band}>
       <Heading
-        n="03"
-        label="How it works"
         title="You don’t need to own a workstation, You need power for a few hours a week."
       />
       <ul ref={listRef} className="mt-12 border-t border-hairline">
@@ -399,15 +399,13 @@ function Cost() {
   );
 }
 
-// 04 — the session, start to finish.
+// The session, start to finish.
 function Session() {
   return (
     <Section id="session" className={band}>
       <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
         <div>
           <Heading
-            n="04"
-            label="A session"
             title="How a session works"
             sub="Everything from opening the app to getting to work takes as little as 45 seconds."
           />
@@ -440,13 +438,11 @@ function Session() {
   );
 }
 
-// 05 — files and licensing.
+// Files and licensing.
 function Yours() {
   return (
     <Section id="privacy" className={band}>
       <Heading
-        n="05"
-        label="Privacy &amp; Compliance"
         title="Your files and your licence stay yours."
         sub="Renting compute shouldn’t mean giving up control of your files or buying software twice."
       />
@@ -468,15 +464,13 @@ function Yours() {
   );
 }
 
-// 06 — pricing, which is a notice rather than a table until there is one.
+// Pricing, which is a notice rather than a table until there is one.
 function Pricing() {
   return (
     <Section id="pricing" className={band}>
       <Heading
-        n="06"
-        label="Pricing"
         title="Pay for what you need."
-        sub="Two simple plans with monthly GPU hours. Running into a busy project week? Top up extra hours anytime without upgrading your plan. We don’t sell licenses, get that from your software provider."
+        sub="Plans sized to how you actually work, so you get the power you need without paying for hours you never use. Whether you’re a student or running a studio, there’s an option that fits. We don’t sell licenses, get those from your software provider."
       />
       <div className="reveal mt-12 flex max-w-2xl items-start gap-4 border border-hairline bg-surface p-6">
         <span className="mt-0.5 shrink-0 text-accent">
@@ -505,7 +499,7 @@ function Closing() {
           out of your laptop and we&rsquo;ll get in touch.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Button variant="primary" size="lg" disabled>
+          <Button variant="primary" size="lg" arrow onClick={openEarlyAccess}>
             Request Early Access
           </Button>
           <LinkButton href={`mailto:${contact}`} size="lg">
@@ -549,8 +543,16 @@ function Footer() {
             aria-hidden
             className="lift pe-[0.05em] font-display text-[25.6cqw] leading-none tracking-[-0.05em] whitespace-nowrap text-ink select-none"
           >
-            {[..."meshrun"].map((c, i) => (
-              <span key={i} style={stagger(i)}>
+            {[..."meshrun"].map((c, i, all) => (
+              <span
+                key={i}
+                style={
+                  {
+                    ...stagger(i),
+                    "--stagger-out": `${(all.length - 1 - i) * 40}ms`,
+                  } as CSSProperties
+                }
+              >
                 {c}
               </span>
             ))}

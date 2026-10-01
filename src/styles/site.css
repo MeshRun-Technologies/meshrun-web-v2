@@ -293,7 +293,9 @@
 }
 
 /* Clears the middle of the sheet so the hook sits on paper, and lifts a lens
-   of it back wherever the pointer is working. Two mask layers, added. */
+   of it back wherever the pointer is working. Two mask layers, added. The
+   clearing eases out over most of the pane on a smoothstep, so the drawings
+   thin towards the hook rather than stopping at an oval you can trace. */
 .sheet-mask {
   mask-image:
     radial-gradient(
@@ -303,25 +305,50 @@
       transparent 100%
     ),
     radial-gradient(
-      ellipse 46% 38% at 50% 47%,
+      ellipse 58% 50% at 50% 47%,
       transparent 0%,
-      transparent 30%,
-      rgba(0, 0, 0, 0.05) 52%,
-      rgba(0, 0, 0, 0.3) 74%,
-      rgba(0, 0, 0, 0.68) 88%,
+      transparent 18%,
+      rgba(0, 0, 0, 0.03) 30%,
+      rgba(0, 0, 0, 0.1) 42%,
+      rgba(0, 0, 0, 0.24) 54%,
+      rgba(0, 0, 0, 0.44) 66%,
+      rgba(0, 0, 0, 0.66) 78%,
+      rgba(0, 0, 0, 0.85) 89%,
       #000 100%
     );
   mask-composite: add;
 }
 
 /* The one warm wash on the page: the accent, at the threshold of visible,
-   pooled behind the hook. */
+   pooled behind the hook. Eased stops, so it has a centre but no rim. */
 .sheet-wash {
+  --wash: var(--color-accent);
+  /* Sized past the pane's edges, so the falloff never finishes on screen:
+     there is a warmer middle, but nowhere the tint visibly stops. */
   background: radial-gradient(
-    ellipse 75% 68% at 50% 44%,
-    color-mix(in oklab, var(--color-accent) 5%, transparent),
-    transparent 72%
+    ellipse 95% 90% at 50% 46%,
+    color-mix(in oklab, var(--wash) 2.6%, transparent) 0%,
+    color-mix(in oklab, var(--wash) 2.3%, transparent) 16%,
+    color-mix(in oklab, var(--wash) 1.75%, transparent) 32%,
+    color-mix(in oklab, var(--wash) 1.15%, transparent) 48%,
+    color-mix(in oklab, var(--wash) 0.6%, transparent) 64%,
+    color-mix(in oklab, var(--wash) 0.2%, transparent) 80%,
+    transparent 100%
   );
+}
+
+/* Dither over the wash. A tint this faint has only a few colour steps to
+   cross the pane, and the eye finds each step as a contour ring. A fine grain,
+   blended soft-light around mid-grey so it averages out to nothing, breaks the
+   steps up. */
+.sheet-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0.33 0.33 0.33 0 0 0.33 0.33 0.33 0 0 0.33 0.33 0.33 0 0 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+  opacity: 0.22;
+}
+/* Soft-light reads stronger on dark paper; half the dose does the same job. */
+:root.dark .sheet-grain {
+  opacity: 0.1;
 }
 
 /* ---------------------------------------------------------------------------
@@ -515,8 +542,12 @@
     display: inline-block;
     transition: transform var(--dur-reveal) var(--ease-expressive) var(--stagger, 0ms);
   }
+  /* Leaving is the entrance rewound: the last letter drops first, quicker
+     than it rose and accelerating, so they fall away rather than settle. */
   &.pre > span {
     transform: translateY(110%);
+    transition: transform var(--dur-slow) cubic-bezier(0.5, 0, 0.75, 0)
+      var(--stagger-out, 0ms);
   }
 }
 
@@ -675,6 +706,125 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Early access dialog.
+   The sheet rises a little as the page behind it frosts over; it sinks back
+   on the way out. Steps slide in from the side they come from (--dir is 1
+   going forward, -1 going back) and resolve out of a slight blur.
+   --------------------------------------------------------------------------- */
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+@keyframes modal-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@utility modal {
+  &[open] {
+    animation: modal-in var(--dur-slow) var(--ease-expressive) both;
+  }
+  &::backdrop {
+    background: color-mix(in oklab, var(--color-bg) 72%, transparent);
+    backdrop-filter: blur(8px);
+    animation: fade-in var(--dur-slow) var(--ease-standard) both;
+  }
+  &[data-closing] {
+    animation: modal-out var(--dur-base) var(--ease-standard) both;
+  }
+  &[data-closing]::backdrop {
+    animation: fade-out var(--dur-base) var(--ease-standard) both;
+  }
+}
+
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--dir, 1) * 28px));
+    filter: blur(4px);
+  }
+}
+@utility step-in {
+  animation: step-in var(--dur-slow) var(--ease-expressive) both;
+}
+
+/* A choice tile. Picking it plots the same ink outline as a ruled cell, from
+   the top-left corner both ways round; the radio dot springs in, the
+   checkbox fills and its tick is drawn. */
+@utility choice {
+  position: relative;
+  transition:
+    background-color var(--dur-base) var(--ease-expressive),
+    border-color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-instant) var(--ease-standard);
+  &:active {
+    transform: scale(0.985);
+  }
+  & > .trace {
+    position: absolute;
+    inset: -0.5px;
+    width: calc(100% + 1px);
+    height: calc(100% + 1px);
+    overflow: visible;
+    pointer-events: none;
+  }
+  & > .trace rect {
+    fill: none;
+    stroke: var(--color-ink);
+    stroke-width: 1;
+    stroke-dasharray: 0 1 0 0;
+    transition: stroke-dasharray var(--dur-reveal) var(--ease-expressive);
+  }
+  &[data-on='true'] > .trace rect {
+    stroke-dasharray: 0.5 0 0.5 0;
+  }
+  & .ring,
+  & .box {
+    transition:
+      border-color var(--dur-fast) var(--ease-standard),
+      background-color var(--dur-fast) var(--ease-standard);
+  }
+  & .dot {
+    transform: scale(0);
+    transition: transform var(--dur-slow) var(--ease-expressive);
+  }
+  &[data-on='true'] .ring {
+    border-color: var(--color-accent);
+  }
+  &[data-on='true'] .dot {
+    transform: scale(1);
+  }
+  & .box {
+    color: var(--color-on-cta);
+  }
+  &[data-on='true'] .box {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+  }
+  & .tick {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    transition: stroke-dashoffset var(--dur-slow) var(--ease-expressive) 60ms;
+  }
+  &[data-on='true'] .tick {
+    stroke-dashoffset: 0;
+  }
+}
+
 /* Draws along the row's bottom edge while a machine starts. Animates
    transform, not width, so it never forces layout mid-flight. */
 @utility boot-bar {
@@ -751,6 +901,160 @@
 :root.dark .when-light,
 :root:not(.dark) .when-dark {
   display: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Cursor.
+   A dot on the pointer and an accent ring trailing it, swelling over anything
+   clickable. Buttons swallow it: the ring takes the button's box and the
+   button takes the accent. Fine pointers only; text fields keep the caret.
+   The layer is a popover so it can sit above a modal dialog in the top layer.
+   --------------------------------------------------------------------------- */
+.cursor-layer {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.cursor-dot,
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  border-radius: 9999px;
+  opacity: 0;
+  will-change: transform;
+}
+
+.cursor-dot {
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  background: var(--color-accent);
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
+
+.cursor-ring {
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -19px;
+  border: 1px solid color-mix(in oklab, var(--color-accent) 55%, transparent);
+  background: color-mix(in oklab, var(--color-accent) 6%, transparent);
+  transition:
+    opacity var(--dur-base) var(--ease-standard),
+    width 320ms var(--ease-expressive),
+    height 320ms var(--ease-expressive),
+    margin 320ms var(--ease-expressive),
+    background-color 320ms var(--ease-standard),
+    border-color 320ms var(--ease-standard);
+}
+
+.cursor-ring[data-hot='true'] {
+  width: 66px;
+  height: 66px;
+  margin: -33px 0 0 -33px;
+  background: color-mix(in oklab, var(--color-accent) 14%, transparent);
+  border-color: color-mix(in oklab, var(--color-accent) 85%, transparent);
+}
+
+.cursor-ring[data-absorbed='true'] {
+  background: color-mix(in oklab, var(--color-accent) 18%, transparent);
+  border-color: transparent;
+  transition:
+    width var(--dur-slow) var(--ease-expressive),
+    height var(--dur-slow) var(--ease-expressive),
+    margin var(--dur-slow) var(--ease-expressive),
+    border-radius var(--dur-slow) var(--ease-expressive),
+    background-color 240ms var(--ease-standard),
+    border-color 240ms var(--ease-standard);
+}
+
+/* A white neon comet that runs round a control's border while it holds the
+   cursor: a bright head and a fading tail over a faint lit track, surging and
+   easing once a lap. Cursor.tsx sizes and moves it; this is only its look.
+   The white is the filled controls' text white; in dark mode that turns to
+   ink, so the trace takes the dark theme's white text instead. */
+.cursor-trace {
+  --trace: var(--color-on-cta);
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform;
+  /* A tight core glow and a softer halo: lit, not blurred. */
+  filter: drop-shadow(0 0 1.5px var(--trace))
+    drop-shadow(0 0 6px color-mix(in oklab, var(--trace) 60%, transparent));
+}
+:root.dark .cursor-trace {
+  --trace: var(--color-ink);
+}
+.cursor-trace rect {
+  fill: none;
+  stroke: var(--trace);
+  stroke-width: 1;
+}
+/* The tube the light runs in, just visible. */
+.cursor-trace .trace-track {
+  opacity: 0.16;
+}
+.cursor-trace .trace-tail {
+  opacity: 0.22;
+}
+.cursor-trace .trace-body {
+  opacity: 0.5;
+  stroke-linecap: round;
+}
+.cursor-trace .trace-head {
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.cursor-trace[data-state='on'] {
+  opacity: 1;
+  transition: opacity 160ms var(--ease-standard);
+}
+.cursor-trace[data-state='out'] {
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
+
+/* The cursor is swallowed by the control and the control takes its colour. */
+.absorbed,
+.absorbed:hover {
+  background-color: var(--color-cta) !important;
+  border-color: var(--color-cta) !important;
+  color: var(--color-on-cta) !important;
+}
+/* Already in the brand colour; it deepens instead. */
+.absorbed[data-variant='primary'] {
+  background-color: var(--color-cta-hover) !important;
+  border-color: var(--color-cta-hover) !important;
+}
+
+@media (pointer: fine) {
+  .custom-cursor,
+  .custom-cursor * {
+    cursor: none !important;
+  }
+  .custom-cursor input,
+  .custom-cursor textarea,
+  .custom-cursor select {
+    cursor: auto !important;
+  }
+}
+
+@media (pointer: coarse) {
+  .cursor-layer {
+    display: none;
+  }
 }
 
 /* The scroll cue's chevron, the page's one idle loop. */
