@@ -5,7 +5,7 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-import { type Env, handleEarlyAccess, type Sink } from './server/earlyAccess'
+import { type Env, handleEarlyAccess, type Sink } from './server/earlyAccess.js'
 
 // With nothing configured, local submissions land in a file instead of
 // failing, so the form can be worked on without any keys.

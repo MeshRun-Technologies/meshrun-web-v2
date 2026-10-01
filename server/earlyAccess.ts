@@ -11,7 +11,7 @@ import {
   MIN_ELAPSED_MS,
   type Submission,
   validateSubmission,
-} from "../src/lib/earlyAccess";
+} from "../src/lib/earlyAccess.js";
 
 export type Env = Record<string, string | undefined>;
 
