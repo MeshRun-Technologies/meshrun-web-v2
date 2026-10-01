@@ -977,9 +977,11 @@
     border-color 240ms var(--ease-standard);
 }
 
-/* A white neon comet that runs round a control's border while it holds the
-   cursor: a bright head and a fading tail over a faint lit track, surging and
-   easing once a lap. Cursor.tsx sizes and moves it; this is only its look.
+/* A control's border plotted as the cursor is absorbed into it, exactly as a
+   ruled card's is on hover (see `ruled`): pathLength=1 makes the perimeter one
+   unit, and the dash, gap, dash, gap pattern grows one line clockwise from the
+   top-left corner and one anticlockwise, meeting at the bottom-right. Leaving
+   plots it back. Cursor.tsx places it and flips data-state.
    The white is the filled controls' text white; in dark mode that turns to
    ink, so the trace takes the dark theme's white text instead. */
 .cursor-trace {
@@ -989,11 +991,7 @@
   left: 0;
   overflow: visible;
   pointer-events: none;
-  opacity: 0;
   will-change: transform;
-  /* A tight core glow and a softer halo: lit, not blurred. */
-  filter: drop-shadow(0 0 1.5px var(--trace))
-    drop-shadow(0 0 6px color-mix(in oklab, var(--trace) 60%, transparent));
 }
 :root.dark .cursor-trace {
   --trace: var(--color-ink);
@@ -1002,28 +1000,15 @@
   fill: none;
   stroke: var(--trace);
   stroke-width: 1;
+  stroke-dasharray: 0 1 0 0;
+  transition: stroke-dasharray calc(var(--dur-reveal) * 1.6) var(--ease-expressive);
 }
-/* The tube the light runs in, just visible. */
-.cursor-trace .trace-track {
-  opacity: 0.16;
+.cursor-trace[data-state='on'] rect {
+  stroke-dasharray: 0.5 0 0.5 0;
 }
-.cursor-trace .trace-tail {
-  opacity: 0.22;
-}
-.cursor-trace .trace-body {
-  opacity: 0.5;
-  stroke-linecap: round;
-}
-.cursor-trace .trace-head {
-  stroke-width: 1.5;
-  stroke-linecap: round;
-}
-.cursor-trace[data-state='on'] {
-  opacity: 1;
-  transition: opacity 160ms var(--ease-standard);
-}
-.cursor-trace[data-state='out'] {
-  transition: opacity var(--dur-base) var(--ease-standard);
+/* Back to nothing at once, for a fresh start on the next control. */
+.cursor-trace[data-state='reset'] rect {
+  transition: none;
 }
 
 /* The cursor is swallowed by the control and the control takes its colour. */

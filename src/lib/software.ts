@@ -2,6 +2,8 @@
 // entry is [name, vendor, category, aliases?]; aliases are extra search terms
 // people actually type ("sw", "fusion 360", "c4d").
 
+import { buildIndex, fold, search } from "./search";
+
 export type Software = readonly [
   name: string,
   vendor: string,
@@ -346,41 +348,27 @@ export const SOFTWARE: readonly Software[] = [
   ["Optitex", "EFI", "Fashion"],
 ];
 
-const fold = (s: string) =>
-  s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+const popularSet = new Set<string>(POPULAR);
 
-const index = SOFTWARE.map((s) => ({
-  s,
-  name: fold(s[0]),
-  rest: fold(`${s[1]} ${s[2]} ${s[3] ?? ""}`),
-}));
+// Aliases are space-separated short forms; the vendor and category only count
+// when nothing in the name does ("autodesk" lists Autodesk's apps).
+const index = buildIndex(
+  SOFTWARE.map((s) => ({
+    software: s,
+    name: s[0],
+    aliases: s[3]?.split(" "),
+    context: `${s[1]} ${s[2]}`,
+    rank: popularSet.has(s[0]) ? 120 : 0,
+  })),
+);
 
-/** Best matches first: name prefix, then a word in the name, then anywhere. */
+/** Best matches first, forgiving short forms and slips; see search.ts. */
 export function searchSoftware(query: string, limit = 8): Software[] {
-  const q = fold(query);
-  if (!q) return [];
-  const scored: { s: Software; score: number }[] = [];
-  for (const { s, name, rest } of index) {
-    let score = 0;
-    if (name.startsWith(q)) score = 4;
-    else if (` ${name}`.includes(` ${q}`)) score = 3;
-    else if (name.includes(q) || name.replace(/ /g, "").includes(q.replace(/ /g, ""))) score = 2;
-    else if (` ${rest}`.includes(` ${q}`)) score = 1;
-    if (score) scored.push({ s, score });
-  }
-  return scored
-    .sort((a, b) => b.score - a.score || a.s[0].localeCompare(b.s[0]))
-    .slice(0, limit)
-    .map((x) => x.s);
+  return search(index, query, limit).map((x) => x.software);
 }
 
 /** The catalogue's spelling of a name, if it has one. */
 export function findSoftware(name: string): Software | undefined {
   const q = fold(name);
-  return index.find((x) => x.name === q)?.s;
+  return index.entries.find((e) => e.name === q)?.item.software;
 }

@@ -17,15 +17,6 @@ const ABSORB = "[data-absorb]";
 const HOT =
   'a, button, [role="button"], [role="option"], label, summary, input, select, textarea, [data-cursor="hot"]';
 
-/** The lit segment's length, in px, once it has grown. */
-const TRACE_LENGTH = 64;
-/** Its average speed round the border, in px per second. */
-const TRACE_SPEED = 150;
-/** How far the speed swings either side of that average over each lap. */
-const TRACE_SURGE = 0.6;
-/** The comet's layers, tail to head: share of the full length each one lights. */
-const TRACE_LAYERS = [1, 0.5, 0.16];
-
 /**
  * A dot that tracks the pointer exactly and a ring that trails it, swelling
  * over anything clickable. Position is written straight to the elements from a
@@ -43,10 +34,8 @@ export function Cursor() {
     const dot = dotRef.current;
     const ring = ringRef.current;
     const trace = traceRef.current;
-    if (!layer || !dot || !ring || !trace) return;
-    // The faint track first, then the comet's tail, body and head.
-    const [track, ...comet] = Array.from(trace.querySelectorAll("rect"));
-    const outlines = [track, ...comet];
+    const outline = trace?.querySelector("rect");
+    if (!layer || !dot || !ring || !trace || !outline) return;
     if (!window.matchMedia("(pointer: fine)").matches) return;
 
     const root = document.documentElement;
@@ -104,68 +93,18 @@ export function Cursor() {
     // it, and the control takes the cursor's colour until you leave.
     let absorbed: HTMLElement | null = null;
 
-    // A comet runs round the control's border while it holds the cursor: a
-    // bright head trailing a fading tail over a faint lit track. It grows out
-    // of a point as it sets off, then laps for as long as the cursor stays,
-    // surging and easing once a lap so the tail stretches when it is quick and
-    // bunches up as it slows. Drawn from a rAF loop with plain px values;
-    // browsers drop a calc'd dash pattern and fall back to a solid border.
-    let perimeter = 0;
-    let lap = 0;
-    let runStart = 0;
-    let runFrame = 0;
-    let fadeStart = 0;
-
-    const renderTrace = (elapsed: number) => {
-      const phase = elapsed / lap;
-      const turn = 2 * Math.PI * phase;
-      // Distance round the border: steady progress with a once-a-lap swell
-      // (speed is the derivative, 1 + surge·cos, so it never stops).
-      const head = perimeter * (phase + (TRACE_SURGE * Math.sin(turn)) / (2 * Math.PI));
-      const speed = 1 + TRACE_SURGE * Math.cos(turn);
-      const grow = 1 - (1 - Math.min(elapsed / 0.7, 1)) ** 3;
-      const length =
-        Math.min(TRACE_LENGTH * (0.6 + 0.4 * speed), perimeter * 0.45) * grow;
-
-      comet.forEach((rect, i) => {
-        const lit = length * TRACE_LAYERS[i];
-        rect.style.strokeDasharray = `${lit}px ${perimeter - lit}px`;
-        // Every layer's leading end on the same point, the head.
-        rect.style.strokeDashoffset = `${(lit - head) % perimeter}px`;
-      });
-      // The head flares as it surges and dims as it eases.
-      comet[comet.length - 1].style.opacity = `${0.7 + 0.3 * ((speed - (1 - TRACE_SURGE)) / (2 * TRACE_SURGE))}`;
-    };
-
-    const runTrace = (now: number) => {
-      if (fadeStart && now - fadeStart > 400) {
-        trace.dataset.state = "off";
-        runFrame = 0;
-        return;
-      }
-      renderTrace((now - runStart) / 1000);
-      runFrame = requestAnimationFrame(runTrace);
-    };
-
+    // The control's border is plotted the way a ruled card's is on hover: two
+    // lines leave the top-left corner, one each way round, and meet at the
+    // bottom-right. Leaving plots it back the way it came.
     const drawTrace = (control: HTMLElement) => {
       const radius = parseFloat(getComputedStyle(control).borderTopLeftRadius) || 0;
       // Half a stroke in from the edge, so the corner follows the border's own.
-      for (const rect of outlines) rect.setAttribute("rx", `${Math.max(radius - 0.5, 0)}`);
-      // A zero length would read as a solid dash, so fall back to the box.
-      perimeter =
-        track.getTotalLength() || 2 * (track.width.baseVal.value + track.height.baseVal.value);
-      // Small controls aren't lapped in a blur, wide ones aren't left waiting.
-      lap = Math.min(Math.max(perimeter / TRACE_SPEED, 1.4), 3);
-      runStart = performance.now();
-      fadeStart = 0;
+      outline.setAttribute("rx", `${Math.max(radius - 0.5, 0)}`);
+      // Start from nothing, even if the last control's lines were still
+      // being taken back when the cursor got here.
+      trace.dataset.state = "reset";
+      void trace.getBoundingClientRect();
       trace.dataset.state = "on";
-
-      if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        // Held still, at full length, from the top-left corner.
-        renderTrace(0.7);
-        return;
-      }
-      if (!runFrame) runFrame = requestAnimationFrame(runTrace);
     };
     // The line lies on the control's own border, not around it.
     const placeTrace = (box: DOMRect) => {
@@ -173,16 +112,12 @@ export function Cursor() {
       trace.setAttribute("width", `${box.width}`);
       trace.setAttribute("height", `${box.height}`);
       // Inset by half the stroke so the whole 1px lands inside the border box.
-      for (const rect of outlines) {
-        rect.setAttribute("width", `${Math.max(box.width - 1, 0)}`);
-        rect.setAttribute("height", `${Math.max(box.height - 1, 0)}`);
-      }
+      outline.setAttribute("width", `${Math.max(box.width - 1, 0)}`);
+      outline.setAttribute("height", `${Math.max(box.height - 1, 0)}`);
     };
-    // It keeps running while it fades, so it goes out where it is.
+    // Stays where it was drawn while it unwinds.
     const fadeTrace = () => {
-      if (trace.dataset.state !== "on") return;
-      trace.dataset.state = "out";
-      fadeStart = performance.now();
+      if (trace.dataset.state === "on") trace.dataset.state = "off";
     };
 
     const release = () => {
@@ -276,7 +211,6 @@ export function Cursor() {
       window.removeEventListener("blur", onLeave);
       window.removeEventListener(RAISE_EVENT, raise);
       if (frame) cancelAnimationFrame(frame);
-      if (runFrame) cancelAnimationFrame(runFrame);
     };
   }, []);
 
@@ -285,10 +219,7 @@ export function Cursor() {
       <div ref={dotRef} className="cursor-dot" />
       <div ref={ringRef} className="cursor-ring" />
       <svg ref={traceRef} className="cursor-trace" data-state="off">
-        <rect className="trace-track" x="0.5" y="0.5" />
-        <rect className="trace-tail" x="0.5" y="0.5" />
-        <rect className="trace-body" x="0.5" y="0.5" />
-        <rect className="trace-head" x="0.5" y="0.5" />
+        <rect x="0.5" y="0.5" pathLength={1} />
       </svg>
     </div>
   );

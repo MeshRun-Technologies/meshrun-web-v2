@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
+import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
+import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
 
 import { contact } from "../content";
 import {
@@ -7,6 +7,8 @@ import {
   QUESTION_LABELS,
   validateSubmission,
 } from "../lib/earlyAccess";
+import { loadOrgs, type Org, type OrgKind } from "../lib/orgs";
+import { fold, type Index, search } from "../lib/search";
 import { findSoftware, POPULAR, searchSoftware, SOFTWARE } from "../lib/software";
 import { Button } from "./Button";
 import { raiseCursor } from "./Cursor";
@@ -914,10 +916,15 @@ function SoftwarePicker({
                       </svg>
                     </span>
                   )}
-                  <span className="min-w-0 flex-1 truncate text-base text-ink">
+                  <span className={`min-w-0 truncate text-base text-ink ${r.custom ? "flex-1" : ""}`}>
                     {r.custom ? <>Add &ldquo;{r.name}&rdquo;</> : r.name}
                   </span>
-                  <span className="hidden shrink-0 text-sm text-ink-subtle sm:block">{r.meta}</span>
+                  {!r.custom && (
+                    <>
+                      <Leader className="hidden sm:block" />
+                      <span className="hidden shrink-0 text-sm text-ink-subtle sm:block">{r.meta}</span>
+                    </>
+                  )}
                 </li>
               );
             })}
@@ -1005,20 +1012,20 @@ function Details({
           )}
         </label>
         {org && (
-          <label className="row-in flex flex-col gap-1.5 sm:col-span-2" style={delay(130)}>
-            <span className="text-sm text-ink-muted">
-              {org}
-              {optional}
-            </span>
-            <input
-              type="text"
-              autoComplete="organization"
+          <div className="row-in flex flex-col gap-1.5 sm:col-span-2" style={delay(130)}>
+            <OrgField
+              kind={org}
+              label={
+                <>
+                  {org}
+                  {optional}
+                </>
+              }
               value={answers.org}
-              onChange={(e) => setAnswers({ ...answers, org: e.target.value })}
-              onKeyDown={onFieldKey}
-              className={`${field} h-10`}
+              onChange={(value) => setAnswers({ ...answers, org: value })}
+              onFieldKey={onFieldKey}
             />
-          </label>
+          </div>
         )}
         <label className="row-in flex flex-col gap-1.5 sm:col-span-2" style={delay(165)}>
           <span className="text-sm text-ink-muted">Comments{optional}</span>
@@ -1030,6 +1037,164 @@ function Details({
             className={`${field} resize-none py-2.5`}
           />
         </label>
+      </div>
+    </>
+  );
+}
+
+/** The dotted run between a name and its detail: "UBC ........ BC, Canada". */
+function Leader({ className = "" }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={`mb-[0.3em] min-w-4 flex-1 self-end border-b border-dotted border-edge ${className}`}
+    />
+  );
+}
+
+/**
+ * The company or university box: free text, with the known ones suggested as
+ * you type, best match first and where each one is on the right. Picking one
+ * fills in its name. Whatever is typed stands as it is, and unless it is
+ * already one of the names, the last row offers exactly that.
+ */
+function OrgField({
+  kind,
+  label,
+  value,
+  onChange,
+  onFieldKey,
+}: {
+  kind: OrgKind;
+  label: ReactNode;
+  value: string;
+  onChange: (value: string) => void;
+  onFieldKey: (e: KeyboardEvent<HTMLInputElement>) => void;
+}) {
+  const id = useId();
+  const [index, setIndex] = useState<Index<Org> | null>(null);
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  // The list is ten thousand long; typing stays ahead of the matching.
+  const query = useDeferredValue(value).trim();
+
+  useEffect(() => {
+    let live = true;
+    // If it never arrives, the box still takes whatever is typed.
+    loadOrgs(kind).then(
+      (i) => live && setIndex(i),
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, [kind]);
+
+  const matches = useMemo(() => (index && query ? search(index, query, 6) : []), [index, query]);
+  const rows = [
+    ...matches.map((m) => ({ name: m.name, area: m.area, custom: false })),
+    ...(query && !matches.some((m) => fold(m.name) === fold(query))
+      ? [{ name: query, area: "", custom: true }]
+      : []),
+  ];
+  const shown = open && rows.length > 0;
+  const current = Math.min(active, rows.length - 1);
+  const noun = kind === "University" ? "universities" : "companies";
+
+  const choose = (name: string) => {
+    onChange(name);
+    setOpen(false);
+  };
+
+  const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!shown) {
+        setOpen(true);
+        return;
+      }
+      const step = e.key === "ArrowDown" ? 1 : -1;
+      setActive((current + step + rows.length) % rows.length);
+    } else if (e.key === "Enter" && shown) {
+      e.preventDefault();
+      choose(rows[current].name);
+    } else if (e.key === "Escape" && shown) {
+      // Closes the list rather than the dialog.
+      e.preventDefault();
+      setOpen(false);
+    } else {
+      onFieldKey(e);
+    }
+  };
+
+  return (
+    <>
+      <label htmlFor={`${id}-input`} className="text-sm text-ink-muted">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={`${id}-input`}
+          type="text"
+          role="combobox"
+          aria-expanded={shown}
+          aria-controls={`${id}-list`}
+          aria-activedescendant={shown ? `${id}-${current}` : undefined}
+          aria-autocomplete="list"
+          autoComplete="organization"
+          spellCheck={false}
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setOpen(true);
+            setActive(0);
+          }}
+          onBlur={() => setOpen(false)}
+          onKeyDown={onKey}
+          placeholder={`Start typing to search ${noun}`}
+          className={`${field} h-10`}
+        />
+        {shown && (
+          <ul
+            id={`${id}-list`}
+            role="listbox"
+            aria-label={`Matching ${noun}`}
+            className="menu-in absolute inset-x-0 top-full z-20 mt-1.5 flex flex-col rounded-sm border border-edge bg-raised py-1"
+          >
+            {rows.map((r, i) => (
+              <li
+                key={`${r.custom}:${r.name}:${r.area}`}
+                id={`${id}-${i}`}
+                role="option"
+                aria-selected={i === current}
+                // Keeps the caret in the box while the row is clicked.
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => choose(r.name)}
+                onMouseMove={() => setActive(i)}
+                className={`flex items-center gap-2 px-3 py-2 transition-colors duration-(--dur-fast) ${
+                  i === current ? "bg-surface" : ""
+                }`}
+              >
+                {r.custom ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square" aria-hidden className="shrink-0 text-accent">
+                      <path d="M8 2v12M2 8h12" />
+                    </svg>
+                    <span className="min-w-0 flex-1 truncate text-base text-ink">
+                      Use &ldquo;{r.name}&rdquo;
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="min-w-0 truncate text-base text-ink">{r.name}</span>
+                    <Leader />
+                    <span className="max-w-[45%] shrink-0 truncate text-sm text-ink-subtle">{r.area}</span>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </>
   );
