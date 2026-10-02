@@ -228,14 +228,15 @@ export function Cursor() {
       <div ref={dotRef} className="cursor-dot" />
       <div ref={ringRef} className="cursor-ring" />
       <svg ref={traceRef} className="cursor-trace" data-state="off">
-        {/* The blob's bands, turning slowly round the control. */}
+        {/* The blob's cooler side, turning slowly round the control: a soft
+            apricot into tan, lilac, blue and teal, with no deep red. */}
         <defs>
           <linearGradient id="trace-blob" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#e2401a" />
-            <stop offset="0.25" stopColor="#ffa257" />
-            <stop offset="0.45" stopColor="#f3cc9c" />
-            <stop offset="0.65" stopColor="#8da0ce" />
-            <stop offset="0.82" stopColor="#4f8dff" />
+            <stop offset="0" stopColor="#ffb27a" />
+            <stop offset="0.22" stopColor="#f3cc9c" />
+            <stop offset="0.42" stopColor="#c9c1d6" />
+            <stop offset="0.62" stopColor="#8da0ce" />
+            <stop offset="0.82" stopColor="#6f9bff" />
             <stop offset="1" stopColor="#73bfc4" />
             <animateTransform
               attributeName="gradientTransform"
