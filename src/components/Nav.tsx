@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { bloop } from "../lib/bloop";
 import { Button } from "./Button";
 import { HeroField } from "./HeroField";
 import { openEarlyAccess } from "./EarlyAccess";
@@ -169,9 +170,13 @@ function Menu({ closing, onClose }: { closing: boolean; onClose: () => void }) {
         </div>
 
         {/* The blob, live, at the top of the sheet; it turns to whichever
-            link is touched. */}
+            link is touched, and a tap on it plays its note (touch only: the
+            menu is the phone's, and a mouse click here isn't a tap). */}
         <div
           aria-hidden
+          onPointerUp={(event) => {
+            if (event.pointerType === "touch" && !closing) bloop();
+          }}
           className={`relative min-h-0 flex-1 overflow-hidden rounded-lg ${closing ? "veil-row-out" : "veil-row"}`}
           style={{ animationDelay: closing ? `${NAV_LINKS.length * 38}ms` : "80ms" }}
         >
