@@ -5,24 +5,32 @@ export const targets = [
   {
     icon: 'monitor',
     label: 'High-Quality',
+    figure: '120',
+    caption: 'frames per second at 2K',
     value: 'Smooth 120 FPS at 2K',
     detail: 'Orbit, pan, and zoom without stuttering or low-res blur.',
   },
   {
     icon: 'gauge',
     label: 'Low-Latency',
+    figure: '20ms',
+    caption: 'and up, across North America and Western Europe',
     value: 'Fast & Responsive (20ms+)',
     detail: 'Low latency across North America & Western Europe.',
   },
   {
     icon: 'cpu',
     label: 'Industry Standard',
+    figure: 'RTX',
+    caption: 'NVIDIA RTX 4000 workstations',
     value: 'NVIDIA Workstations',
     detail: 'Powered by industry-leading RTX 4000 GPUs.',
   },
   {
     icon: 'pointer',
     label: 'Full Passthrough',
+    figure: 'Plug in',
+    caption: 'your peripherals and start designing',
     value: 'Plug & Play',
     detail: 'Just plug your peripherals in and start designing.',
   },
@@ -76,6 +84,10 @@ export const trades = [
     cost: "Slower every year, and you can't do anything about it",
     gain: 'Fresh cloud GPUs every year without buying new hardware',
   },
+  {
+    cost: 'Drivers, updates and repairs are yours to deal with',
+    gain: 'A fresh, ready machine every time you open a session',
+  },
 ]
 
 export const steps = [
@@ -83,7 +95,7 @@ export const steps = [
     icon: 'terminal',
     step: 'Step 01',
     title: 'Open the app',
-    body: 'Launch MeshRun from your Dock. It signs you in and connects to the fastest nearby server automatically.',
+    body: 'Launch meshrun from your Dock. It signs you in and connects to the fastest nearby server automatically.',
   },
   {
     icon: 'layers',
@@ -118,7 +130,7 @@ export const yours = [
   },
   {
     icon: 'shield',
-    title: 'Use your existing license',
+    title: 'Use your existing licence',
     body: "Sign in with your own Autodesk account, exactly as you do now. We don't resell licences and your subscription doesn't change.",
   },
 ] as const

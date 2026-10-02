@@ -5,48 +5,45 @@
 
 /* ---------------------------------------------------------------------------
    Design tokens.
-   Two registers on one warm hue (oklch 60°). The sheet — bg, surface and the
-   hairlines — carries the warmth at chroma 0.0035–0.0065. The marks — ink and
-   its steps, and edge — sit on the same hue at chroma ≤0.002, so they read as
-   graphite rather than taupe. Paper yellows; pencil does not, and neutral
-   marks separate more cleanly on warm paper than warm ones do.
-   Every colour in the app comes from here. Tailwind v4 emits colour utilities
-   as var(--color-*), so redefining a token under :root.dark flips the whole UI
-   without a single dark: variant.
+   One dark world: the page is the render's black, and the only colour on it
+   comes from the render itself, its orange carried over as the one accent.
+   Type is two faces: Unbounded, wide and set in capitals, for display; Host
+   Grotesk for everything read. Shapes are pills for anything pressed and
+   generous rounds for anything that holds content.
+   Every colour in the app comes from here; Tailwind v4 emits colour
+   utilities as var(--color-*).
    --------------------------------------------------------------------------- */
 @theme {
-  --color-bg: #fffcf9;
-  --color-surface: #fffefc;
-  /* Menus and popovers: one step above surface. The tonal step plus an edge
-     border is the whole lift — there is no shadow in this system. */
-  --color-raised: #fffefd;
-  --color-hairline: #f2eeeb;
-  --color-hairline-strong: #e8e4e1;
-  --color-edge: #908e8e;
+  --color-bg: #050505;
+  --color-surface: #0e0e0f;
+  /* Menus and popovers: one step above surface. */
+  --color-raised: #161618;
+  --color-hairline: #1c1c1e;
+  --color-hairline-strong: #2a2a2d;
+  --color-edge: #6f6c68;
 
-  --color-ink: #1b1a1a;
-  --color-ink-muted: #666565;
-  --color-ink-subtle: #757473;
-  --color-on-ink: #fffefc;
+  --color-ink: #f2f1ef;
+  --color-ink-muted: #b4b1ad;
+  --color-ink-subtle: #8f8c88;
+  --color-on-ink: #050505;
 
-  --color-accent: #df5233;
-  --color-accent-hover: #c8462a;
-  --color-accent-tint: #fdf0ec;
-  /* Filled controls. A step deeper than the accent so white text passes
-     AA on it; in dark mode the accent itself is light enough to carry ink. */
-  --color-cta: #c8462a;
-  --color-cta-hover: #b63d23;
-  --color-on-cta: #ffffff;
+  /* The render's orange: rules, the active app, small marks. */
+  --color-accent: #ff8a3d;
+  --color-accent-hover: #ff9e5e;
+  --color-accent-tint: #1f130b;
+  /* Filled controls are the page's white with black type. */
+  --color-cta: #f2f1ef;
+  --color-cta-hover: #ffffff;
+  --color-on-cta: #050505;
 
-  --color-success: #2e8c5a;
-  --color-warning: #c08a1e;
-  --color-error: #b3261e;
+  --color-success: #5cbe87;
+  --color-warning: #e0ae4a;
+  --color-error: #f1877c;
 
-  --font-display: 'Space Grotesk Variable', system-ui, sans-serif;
-  --font-sans: 'Inter Variable', system-ui, sans-serif;
+  --font-display: 'Unbounded Variable', system-ui, sans-serif;
+  --font-sans: 'Host Grotesk Variable', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
 
-  /* Application type scale — deliberately tighter than the reference site's. */
   --text-2xs: 11px;
   --text-2xs--line-height: 16px;
   --text-xs: 12px;
@@ -54,54 +51,27 @@
   --text-sm: 13px;
   --text-sm--line-height: 18px;
   --text-base: 15px;
-  --text-base--line-height: 22px;
+  --text-base--line-height: 23px;
   --text-md: 17px;
-  --text-md--line-height: 24px;
+  --text-md--line-height: 26px;
   --text-lg: 20px;
-  --text-lg--line-height: 26px;
+  --text-lg--line-height: 28px;
   --text-xl: 24px;
-  --text-xl--line-height: 30px;
+  --text-xl--line-height: 32px;
   --text-2xl: 32px;
   --text-2xl--line-height: 38px;
-  /* Marketing steps above the app ramp. Still weight 400 with -0.02em. */
   --text-3xl: 44px;
   --text-3xl--line-height: 48px;
   --text-4xl: 60px;
   --text-4xl--line-height: 62px;
 
-  /* Tight radii are a defining trait of the reference. Do not round these up. */
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 10px;
+  --radius-xs: 4px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
 
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-expressive: cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* Dark values override only what changes. :root.dark outspecifies :root. */
-:root.dark {
-  --color-bg: #121110;
-  --color-surface: #1a1918;
-  --color-raised: #262321;
-  --color-hairline: #262422;
-  --color-hairline-strong: #322f2d;
-  --color-edge: #6c6b6a;
-
-  --color-ink: #ecebea;
-  --color-ink-muted: #989796;
-  --color-ink-subtle: #888786;
-  --color-on-ink: #121110;
-
-  --color-accent: #f47458;
-  --color-accent-hover: #f68a72;
-  --color-accent-tint: #2a1714;
-  --color-cta: #f47458;
-  --color-cta-hover: #f68a72;
-  --color-on-cta: #121110;
-
-  --color-success: #5cbe87;
-  --color-warning: #e0ae4a;
-  --color-error: #f1877c;
 }
 
 @layer base {
@@ -427,7 +397,7 @@
   /* Starts at the height of the bar it replaces, so the menu's own row is
      right in the first painted frame instead of the bar showing through it. */
   from {
-    clip-path: inset(0 0 calc(100% - 2.75rem) 0);
+    clip-path: inset(0 0 calc(100% - 4rem) 0);
   }
 }
 @utility veil {
@@ -597,7 +567,7 @@
     box-shadow: inset 0 0 0 1px var(--color-ink);
   }
   & > li:hover {
-    background: var(--color-surface);
+    background: var(--color-raised);
   }
   /* Hover outline, plotted rather than switched on. pathLength=1 makes the
      perimeter one unit; the pattern is dash, gap, dash, gap summing to 1, so
@@ -905,9 +875,12 @@
 
 /* ---------------------------------------------------------------------------
    Cursor.
-   A dot on the pointer and an accent ring trailing it, swelling over anything
-   clickable. Buttons swallow it: the ring takes the button's box and the
-   button takes the accent. Fine pointers only; text fields keep the caret.
+   A white dot on the pointer and a thin ring trailing it. Over a link the
+   ring swells and takes a faint fill, a lens over the word without hiding
+   it. (No blend modes: the layer lives in the top layer, where they have
+   nothing beneath them to blend with.)
+   Buttons swallow it: the ring takes the button's box and the button takes
+   the fill. Fine pointers only; text fields keep the caret.
    The layer is a popover so it can sit above a modal dialog in the top layer.
    --------------------------------------------------------------------------- */
 .cursor-layer {
@@ -938,35 +911,36 @@
   width: 6px;
   height: 6px;
   margin: -3px 0 0 -3px;
-  background: var(--color-accent);
+  background: #fff;
   transition: opacity var(--dur-base) var(--ease-standard);
 }
 
 .cursor-ring {
-  width: 38px;
-  height: 38px;
-  margin: -19px 0 0 -19px;
-  border: 1px solid color-mix(in oklab, var(--color-accent) 55%, transparent);
-  background: color-mix(in oklab, var(--color-accent) 6%, transparent);
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border: 1px solid rgb(255 255 255 / 0.45);
+  background: rgb(255 255 255 / 0);
   transition:
     opacity var(--dur-base) var(--ease-standard),
-    width 320ms var(--ease-expressive),
-    height 320ms var(--ease-expressive),
-    margin 320ms var(--ease-expressive),
-    background-color 320ms var(--ease-standard),
-    border-color 320ms var(--ease-standard);
+    width 360ms var(--ease-expressive),
+    height 360ms var(--ease-expressive),
+    margin 360ms var(--ease-expressive),
+    background-color 300ms var(--ease-standard),
+    border-color 300ms var(--ease-standard);
 }
 
 .cursor-ring[data-hot='true'] {
-  width: 66px;
-  height: 66px;
-  margin: -33px 0 0 -33px;
-  background: color-mix(in oklab, var(--color-accent) 14%, transparent);
-  border-color: color-mix(in oklab, var(--color-accent) 85%, transparent);
+  width: 58px;
+  height: 58px;
+  margin: -29px 0 0 -29px;
+  background: rgb(255 255 255 / 0.08);
+  border-color: rgb(255 255 255 / 0.9);
 }
 
+/* The control takes the fill itself; a tint on top would stain a white pill. */
 .cursor-ring[data-absorbed='true'] {
-  background: color-mix(in oklab, var(--color-accent) 18%, transparent);
+  background: transparent;
   border-color: transparent;
   transition:
     width var(--dur-slow) var(--ease-expressive),
@@ -993,13 +967,10 @@
   pointer-events: none;
   will-change: transform;
 }
-:root.dark .cursor-trace {
-  --trace: var(--color-ink);
-}
 .cursor-trace rect {
   fill: none;
-  stroke: var(--trace);
-  stroke-width: 1;
+  stroke: url(#trace-blob);
+  stroke-width: 1.5;
   stroke-dasharray: 0 1 0 0;
   transition: stroke-dasharray calc(var(--dur-reveal) * 1.6) var(--ease-expressive);
 }
@@ -1012,16 +983,18 @@
 }
 
 /* The cursor is swallowed by the control and the control takes its colour. */
+/* The control inverts: outlines fill white, white fills go black. The blob
+   runs round the edge (the trace). */
 .absorbed,
 .absorbed:hover {
   background-color: var(--color-cta) !important;
-  border-color: var(--color-cta) !important;
+  border-color: transparent !important;
   color: var(--color-on-cta) !important;
 }
-/* Already in the brand colour; it deepens instead. */
-.absorbed[data-variant='primary'] {
-  background-color: var(--color-cta-hover) !important;
-  border-color: var(--color-cta-hover) !important;
+.absorbed[data-variant='primary'],
+.absorbed[data-variant='primary']:hover {
+  background-color: var(--color-bg) !important;
+  color: var(--color-ink) !important;
 }
 
 @media (pointer: fine) {
@@ -1040,6 +1013,363 @@
   .cursor-layer {
     display: none;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   The landing's stage: the page's black, with the render filling it. The
+   canvas stays transparent until its first frame is drawn, then comes up out
+   of the black.
+   --------------------------------------------------------------------------- */
+.stage {
+  background: var(--color-bg);
+}
+:root {
+  color-scheme: dark;
+}
+.hero-field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1400ms var(--ease-standard);
+}
+.hero-field[data-ready='true'] {
+  opacity: 1;
+}
+/* Holds the headline's ground dark enough to read across the sphere: a soft
+   pool of black under the type, and black rising from the bottom left where
+   the line and the action sit. */
+.hero-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 38% 24% at 50% 50%, rgb(5 5 5 / 0.6) 0%, rgb(5 5 5 / 0.36) 55%, transparent 100%),
+    linear-gradient(to top right, rgb(5 5 5 / 0.85) 0%, transparent 34%);
+}
+@media (max-width: 640px) {
+  .hero-veil {
+    background:
+      radial-gradient(ellipse 80% 22% at 50% 50%, rgb(5 5 5 / 0.66) 0%, rgb(5 5 5 / 0.4) 55%, transparent 100%),
+      linear-gradient(to top, rgb(5 5 5 / 0.9) 0%, transparent 30%);
+  }
+}
+.closing-veil {
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 40% 26% at 50% 50%,
+    rgb(5 5 5 / 0.55) 0%,
+    rgb(5 5 5 / 0.3) 55%,
+    transparent 100%
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   The blob, as paint. One wide gradient through the render's bands: ember,
+   orange, the tan highlight, the periwinkle sheen, sky blue, teal. Anything
+   that lights up takes a slice of it (its --pos) and lets the slice drift, so
+   neighbours glow in different parts of the same object.
+   --------------------------------------------------------------------------- */
+:root {
+  --blob: linear-gradient(
+    112deg,
+    #e2401a 0%,
+    #ff7a2a 14%,
+    #ffa257 26%,
+    #f3cc9c 38%,
+    #c2bccd 48%,
+    #8da0ce 58%,
+    #4f8dff 70%,
+    #73bfc4 84%,
+    #ff8a3d 100%
+  );
+}
+@keyframes drift {
+  from {
+    background-position: calc(var(--pos, 30%) - 10%) 30%;
+  }
+  to {
+    background-position: calc(var(--pos, 30%) + 10%) 70%;
+  }
+}
+
+/* Lit things follow the cursor: --mx and --my are where it is over them,
+   set from App.tsx, and glide rather than jump. */
+@property --mx {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 35%;
+}
+@property --my {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 30%;
+}
+
+/* Four tones taken from the blob, each a different corner of it: ember (the
+   hot orange), dune (the tan highlight into lilac), ocean (the blue and
+   teal), eclipse (orange against blue, the sphere's whole contrast). Each is
+   a light under the cursor, a deeper pool opposite it, and a wash between. */
+[data-tone='ember'] {
+  --mesh:
+    radial-gradient(55% 65% at var(--mx) var(--my), #ffd7a3 0%, #ff8a3d 38%, transparent 72%),
+    radial-gradient(70% 80% at calc(100% - var(--mx)) calc(100% - var(--my)), #c42d0e 0%, transparent 70%),
+    linear-gradient(135deg, #ff5a1f, #ff9a4a);
+}
+[data-tone='dune'] {
+  --mesh:
+    radial-gradient(55% 65% at var(--mx) var(--my), #fff3e2 0%, #f3cc9c 40%, transparent 72%),
+    radial-gradient(70% 80% at calc(100% - var(--mx)) calc(100% - var(--my)), #9d8fd0 0%, transparent 70%),
+    linear-gradient(135deg, #e7c39b, #b9b0d8);
+}
+[data-tone='ocean'] {
+  --mesh:
+    radial-gradient(55% 65% at var(--mx) var(--my), #c4f6f3 0%, #73bfc4 40%, transparent 72%),
+    radial-gradient(70% 80% at calc(100% - var(--mx)) calc(100% - var(--my)), #2d6cff 0%, transparent 70%),
+    linear-gradient(135deg, #4f8dff, #7cc9cf);
+}
+[data-tone='eclipse'] {
+  --mesh:
+    radial-gradient(55% 65% at var(--mx) var(--my), #ffc078 0%, #ff7a2a 38%, transparent 72%),
+    radial-gradient(70% 80% at calc(100% - var(--mx)) calc(100% - var(--my)), #4f8dff 0%, transparent 72%),
+    linear-gradient(115deg, #ff6a2a, #8da0ce);
+}
+[data-glow] {
+  transition-property: --mx, --my;
+  transition-duration: 500ms;
+  transition-timing-function: var(--ease-expressive);
+}
+
+/* Tiles: on hover the tile rises out of the group and fills with its tone,
+   its type going dark on it; the others sink back. */
+.tiles > * {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition:
+    transform 520ms var(--ease-expressive),
+    opacity 420ms var(--ease-standard),
+    color 300ms var(--ease-standard),
+    border-color 300ms var(--ease-standard),
+    --mx 500ms var(--ease-expressive),
+    --my 500ms var(--ease-expressive);
+}
+.tiles > [data-tile]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--mesh);
+  opacity: 0;
+  transition: opacity 420ms var(--ease-standard);
+}
+@media (hover: hover) {
+  .tiles > [data-tile]:hover {
+    transform: translateY(-8px);
+    color: var(--color-on-cta);
+    border-color: transparent;
+  }
+  .tiles > [data-tile]:hover::before {
+    opacity: 1;
+  }
+  .tiles > [data-tile]:hover .muted {
+    color: rgb(5 5 5 / 0.78);
+  }
+  .tiles:has(> [data-tile]:hover) > [data-tile]:not(:hover) {
+    opacity: 0.38;
+    transform: scale(0.985);
+  }
+}
+
+/* Figures that light up in their tone under the cursor: a second copy of the
+   figure, painted with the tone, fades in over the white one, so there is no
+   flash of anything in between. */
+.figures > * {
+  transition: opacity 420ms var(--ease-standard), --mx 500ms var(--ease-expressive), --my 500ms var(--ease-expressive);
+}
+.figures .figure-glow {
+  position: absolute;
+  inset: 0;
+  background: var(--mesh);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  opacity: 0;
+  transition: opacity 450ms var(--ease-standard);
+}
+@media (hover: hover) {
+  .figures > *:hover .figure-glow {
+    opacity: 1;
+  }
+  .figures:has(> *:hover) > *:not(:hover) {
+    opacity: 0.35;
+  }
+}
+
+/* The cost panel: flat grey when you own the box, the blob when you rent. */
+.cost-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition: color 700ms var(--ease-standard), border-color 700ms var(--ease-standard);
+}
+.cost-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--blob);
+  background-size: 260% 200%;
+  --pos: 30%;
+  opacity: 0;
+  transition: opacity 900ms var(--ease-expressive);
+  animation: drift 9s var(--ease-standard) infinite alternate;
+}
+.cost-panel[data-rent='true'] {
+  color: var(--color-on-cta);
+  border-color: transparent;
+}
+.cost-panel[data-rent='true']::before {
+  opacity: 1;
+}
+
+/* The early access dialog: the live blob beside the questions, a band over
+   them on a phone, and once it's sent a small whole sphere in the corner. */
+.ea-blob {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 0;
+  background: var(--color-bg);
+  transition:
+    top 900ms var(--ease-expressive),
+    left 900ms var(--ease-expressive),
+    width 900ms var(--ease-expressive),
+    height 900ms var(--ease-expressive),
+    border-radius 900ms var(--ease-expressive);
+}
+.ea-blob[data-done] {
+  top: 36px;
+  left: 36px;
+  width: 200px;
+  height: 200px;
+  border-radius: 999px;
+}
+.ea-main {
+  margin-left: 40%;
+  transition: margin 900ms var(--ease-expressive);
+}
+.ea-main[data-done] {
+  margin-left: 0;
+}
+@media (max-width: 767px) {
+  .ea-blob {
+    width: 100%;
+    height: 132px;
+  }
+  .ea-blob[data-done] {
+    top: 28px;
+    left: 24px;
+    width: 120px;
+    height: 120px;
+  }
+  .ea-main {
+    margin-left: 0;
+    padding-top: 132px;
+  }
+  .ea-main[data-done] {
+    padding-top: 0;
+  }
+}
+
+/* Paired actions: under the cursor one takes the stage, the other recedes. */
+.pair > * {
+  transition-property: color, background-color, border-color, transform, opacity;
+  transition-duration: 300ms;
+}
+@media (hover: hover) {
+  .pair:has(> *:hover) > *:not(:hover) {
+    opacity: 0.3;
+  }
+}
+
+/* Display voice: Unbounded in capitals, tight. */
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: -0.035em;
+}
+
+/* A text link whose underline draws out from the left. */
+@utility link {
+  position: relative;
+  transition: color var(--dur-fast) var(--ease-standard);
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -3px;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--dur-base) var(--ease-expressive);
+  }
+  &:hover {
+    color: var(--color-ink);
+  }
+  &:hover::after {
+    transform: scaleX(1);
+  }
+}
+
+/* The press: everything that is pushed gives a little. */
+@utility press {
+  transition-property: color, background-color, border-color, transform;
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+/* The machine, as the app shows it: grey asleep, warming as a project is
+   picked and it boots, full colour when live. */
+.machine-orb {
+  transition: filter 1100ms var(--ease-expressive);
+}
+.machine[data-state='asleep'] .machine-orb {
+  filter: grayscale(1) brightness(0.5);
+}
+.machine[data-state='picked'] .machine-orb {
+  filter: grayscale(0.65) brightness(0.68);
+}
+.machine[data-state='booting'] .machine-orb {
+  filter: grayscale(0.2) brightness(0.9);
+}
+.machine[data-state='live'] .machine-orb {
+  filter: none;
+}
+/* The session track: a hairline from the first step to the last, its orange
+   drawn as far as the boot as the section comes into view. */
+.track {
+  background: var(--color-hairline-strong);
+}
+.track::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-accent);
+  transform: scaleX(0.667);
+  transform-origin: left;
+  transition: transform 1200ms var(--ease-expressive) 200ms;
+}
+.reveal.pre .track::after {
+  transform: scaleX(0);
 }
 
 /* The scroll cue's chevron, the page's one idle loop. */

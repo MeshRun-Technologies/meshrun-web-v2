@@ -1,27 +1,46 @@
-// The brand: the workstation mark from the favicon beside the lowercase
-// wordmark in the display face. Never bolded.
-export function Wordmark({ className = '' }: { className?: string }) {
+import { useId } from "react";
+
+/**
+ * The mark: a rack of three server units under a lid, split by clean gaps, lit
+ * in the blob's colours from orange at the top left to blue at the bottom
+ * right. The gaps are the page's black, so it sits on any dark ground.
+ */
+export function Mark({ size = 22, className = "" }: { size?: number; className?: string }) {
+  // Each mark needs its own gradient id: several are on the page at once, and
+  // one inside a hidden element would otherwise take the others' fill with it.
+  const id = useId();
   return (
-    <a href="#" className={`inline-flex items-center gap-2 text-ink ${className}`} aria-label="meshrun">
-      <svg
-        viewBox="20 0 200 220"
-        width="20"
-        height="22"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="6"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
-        aria-hidden
-      >
-        <path d="M120 6v34" className="text-accent" stroke="currentColor" strokeDasharray="10 8" />
-        <path d="M120 40 200 80 120 120 40 80Z" />
-        <path d="M40 80v80l80 40v-80" />
-        <path d="M200 80v80l-80 40" />
-        <path d="M134 134l52-26M134 150l52-26M134 166l52-26" />
-        <circle cx="58" cy="102" r="7" className="fill-accent" stroke="none" />
-      </svg>
-      <span className="font-display text-base tracking-[-0.02em]">meshrun</span>
+    <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden className={className}>
+      <defs>
+        <linearGradient id={id} gradientUnits="userSpaceOnUse" x1="12" y1="4" x2="88" y2="96">
+          <stop offset="0" stopColor="#e2401a" />
+          <stop offset="0.28" stopColor="#ff8a3d" />
+          <stop offset="0.48" stopColor="#f3cc9c" />
+          <stop offset="0.66" stopColor="#8da0ce" />
+          <stop offset="0.84" stopColor="#4f8dff" />
+          <stop offset="1" stopColor="#73bfc4" />
+        </linearGradient>
+      </defs>
+      <g fill={`url(#${id})`} stroke="var(--color-bg)" strokeWidth="5" strokeLinejoin="round">
+        <polygon points="50,3.8 90,26.9 50,50 10,26.9" />
+        <polygon points="90,26.9 50,50 50,65.4 90,42.3" fillOpacity="0.7" />
+        <polygon points="10,26.9 50,50 50,65.4 10,42.3" fillOpacity="0.52" />
+        <polygon points="90,42.3 50,65.4 50,80.8 90,57.7" fillOpacity="0.6" />
+        <polygon points="10,42.3 50,65.4 50,80.8 10,57.7" fillOpacity="0.44" />
+        <polygon points="90,57.7 50,80.8 50,96.2 90,73.1" fillOpacity="0.5" />
+        <polygon points="10,57.7 50,80.8 50,96.2 10,73.1" fillOpacity="0.36" />
+      </g>
+    </svg>
+  );
+}
+
+// The brand: the mark beside the lowercase wordmark in the display face, in
+// lower case where everything else in that face is capitals. Never bolded.
+export function Wordmark({ className = "" }: { className?: string }) {
+  return (
+    <a href="#" className={`inline-flex items-center gap-2.5 text-ink ${className}`} aria-label="meshrun">
+      <Mark size={22} />
+      <span className="font-display text-[17px] tracking-[-0.03em]">meshrun</span>
     </a>
-  )
+  );
 }

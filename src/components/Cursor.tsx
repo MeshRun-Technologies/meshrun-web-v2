@@ -97,9 +97,18 @@ export function Cursor() {
     // lines leave the top-left corner, one each way round, and meet at the
     // bottom-right. Leaving plots it back the way it came.
     const drawTrace = (control: HTMLElement) => {
-      const radius = parseFloat(getComputedStyle(control).borderTopLeftRadius) || 0;
+      const box = control.getBoundingClientRect();
+      // A pill's radius is "9999px": clamp it to the box, and set both axes,
+      // or SVG rounds each axis on its own and the outline comes out an oval.
+      const radius = Math.min(
+        parseFloat(getComputedStyle(control).borderTopLeftRadius) || 0,
+        box.width / 2,
+        box.height / 2,
+      );
       // Half a stroke in from the edge, so the corner follows the border's own.
-      outline.setAttribute("rx", `${Math.max(radius - 0.5, 0)}`);
+      const r = `${Math.max(radius - 0.5, 0)}`;
+      outline.setAttribute("rx", r);
+      outline.setAttribute("ry", r);
       // Start from nothing, even if the last control's lines were still
       // being taken back when the cursor got here.
       trace.dataset.state = "reset";
@@ -219,6 +228,25 @@ export function Cursor() {
       <div ref={dotRef} className="cursor-dot" />
       <div ref={ringRef} className="cursor-ring" />
       <svg ref={traceRef} className="cursor-trace" data-state="off">
+        {/* The blob's bands, turning slowly round the control. */}
+        <defs>
+          <linearGradient id="trace-blob" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#e2401a" />
+            <stop offset="0.25" stopColor="#ffa257" />
+            <stop offset="0.45" stopColor="#f3cc9c" />
+            <stop offset="0.65" stopColor="#8da0ce" />
+            <stop offset="0.82" stopColor="#4f8dff" />
+            <stop offset="1" stopColor="#73bfc4" />
+            <animateTransform
+              attributeName="gradientTransform"
+              type="rotate"
+              from="0 0.5 0.5"
+              to="360 0.5 0.5"
+              dur="5s"
+              repeatCount="indefinite"
+            />
+          </linearGradient>
+        </defs>
         <rect x="0.5" y="0.5" pathLength={1} />
       </svg>
     </div>

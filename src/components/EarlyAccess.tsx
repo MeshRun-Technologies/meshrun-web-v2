@@ -11,6 +11,7 @@ import { loadOrgs, type Org, type OrgKind } from "../lib/orgs";
 import { fold, type Index, search } from "../lib/search";
 import { findSoftware, POPULAR, searchSoftware, SOFTWARE } from "../lib/software";
 import { Button } from "./Button";
+import { HeroField } from "./HeroField";
 import { raiseCursor } from "./Cursor";
 
 /* --------------------------------------------------------------------------
@@ -34,21 +35,14 @@ const EXIT_MS = 220;
 /** Long enough to watch the selection draw before the step moves on. */
 const ADVANCE_MS = 340;
 
-type StepId =
-  | "role"
-  | "team"
-  | "study"
-  | "designTeam"
-  | "apps"
-  | "machine"
-  | "current"
-  | "switch"
-  | "pull"
-  | "keep"
-  | "hours"
-  | "details";
+/**
+ * Four steps, a minute between them: who you are, what you run, the machine
+ * you are on with how much you use it, and how to reach you. The questions
+ * kept are the ones that size the product; the rest can wait for a call.
+ */
+type StepId = "role" | "apps" | "setup" | "details";
 
-type ChoiceId = Exclude<StepId, "details">;
+type ChoiceId = "role" | "apps" | "machine" | "hours";
 
 interface Option {
   label: string;
@@ -76,48 +70,12 @@ const CHOICES: Record<ChoiceId, Choice> = {
     kind: "single",
     title: "Who are you?",
     summary: QUESTION_LABELS.role,
-    cols: "",
+    cols: "sm:grid-cols-3",
     options: [
       { label: "Student", desc: "Studying architecture, engineering or design" },
       { label: "Maker", desc: "Personal projects, side work or freelancing" },
       { label: "Professional", desc: "CAD is part of my day job" },
     ],
-  },
-  team: {
-    kind: "single",
-    title: "How big is your team?",
-    summary: QUESTION_LABELS.team,
-    cols: "sm:grid-cols-2",
-    options: [
-      { label: "Just me" },
-      { label: "2–10 people" },
-      { label: "11–50 people" },
-      { label: "More than 50" },
-    ],
-  },
-  study: {
-    kind: "single",
-    title: "What are you studying?",
-    summary: QUESTION_LABELS.study,
-    cols: "sm:grid-cols-2",
-    other: "Something else",
-    options: [
-      { label: "Architecture" },
-      { label: "Engineering" },
-      { label: "Industrial or product design" },
-      { label: "Something else" },
-    ],
-  },
-  designTeam: {
-    kind: "single",
-    title: "Are you on a student design team?",
-    hint: "Formula SAE, robotics, solar car, Solar Decathlon and the like.",
-    summary: QUESTION_LABELS.designTeam,
-    cols: "sm:grid-cols-2",
-    other: "Yes",
-    otherLabel: "Which team?",
-    otherOptional: true,
-    options: [{ label: "Yes" }, { label: "No" }],
   },
   apps: {
     kind: "multi",
@@ -134,68 +92,9 @@ const CHOICES: Record<ChoiceId, Choice> = {
     cols: "sm:grid-cols-3",
     options: [{ label: "Windows" }, { label: "Mac" }, { label: "Linux" }],
   },
-  current: {
-    kind: "single",
-    title: "How do you run Windows CAD today?",
-    hint: "If you use more than one, pick the main one.",
-    summary: QUESTION_LABELS.current,
-    cols: "",
-    other: "Other",
-    options: [
-      { label: "Only apps that run natively", desc: "I work around what’s missing" },
-      { label: "Browser-based apps", desc: "Whatever runs in a tab" },
-      { label: "Virtualization", desc: "Parallels, VMware, UTM" },
-      { label: "A separate Windows machine", desc: "Dual boot, a second PC, the lab’s computers" },
-      { label: "A cloud PC", desc: "Shadow, AWS, a remote desktop" },
-      { label: "Other" },
-    ],
-  },
-  switch: {
-    kind: "single",
-    title: "If your CAD ran perfectly on a Mac, would you switch?",
-    summary: QUESTION_LABELS.switch,
-    cols: "",
-    options: [
-      { label: "Yes", desc: "I’d make the move" },
-      { label: "Maybe", desc: "It depends on the details" },
-      { label: "No", desc: "I’m staying on Windows" },
-    ],
-  },
-  pull: {
-    kind: "multi",
-    title: "What would make a Mac worth it?",
-    hint: "Pick all that apply.",
-    summary: QUESTION_LABELS.pull,
-    cols: "grid-cols-2 sm:grid-cols-3",
-    options: [
-      { label: "Battery life" },
-      { label: "Build quality" },
-      { label: "Performance" },
-      { label: "Display" },
-      { label: "Quiet and cool" },
-      { label: "macOS itself" },
-    ],
-  },
-  keep: {
-    kind: "multi",
-    title: "What keeps you on Windows?",
-    hint: "Pick all that apply.",
-    summary: QUESTION_LABELS.keep,
-    cols: "grid-cols-2 sm:grid-cols-3",
-    other: "Other",
-    options: [
-      { label: "Other software I need" },
-      { label: "I like my machine" },
-      { label: "Price" },
-      { label: "Work provides it" },
-      { label: "Gaming" },
-      { label: "Other" },
-    ],
-  },
   hours: {
     kind: "single",
-    title: "How much heavy CAD work in a typical week?",
-    hint: "Roughly. It helps us size the plans.",
+    title: "Heavy CAD in a typical week",
     summary: QUESTION_LABELS.hours,
     cols: "sm:grid-cols-2",
     options: [
@@ -231,26 +130,28 @@ const EMPTY: Answers = {
 
 const first = (a: Answers, id: ChoiceId) => a.picks[id]?.[0];
 
-/** The route through the questions, given what has been answered so far. */
-function route(a: Answers): StepId[] {
-  const role = first(a, "role");
-  const machine = first(a, "machine");
-  const sw = first(a, "switch");
-  return [
-    "role",
-    ...(role === "Professional" ? ["team" as const] : []),
-    ...(role === "Student" ? ["study" as const, "designTeam" as const] : []),
-    "apps",
-    "machine",
-    ...(machine === "Windows"
-      ? ["switch" as const, ...(sw === "No" ? ["keep" as const] : sw ? ["pull" as const] : [])]
-      : machine
-        ? ["current" as const]
-        : []),
-    "hours",
-    "details",
-  ];
-}
+const ROUTE: StepId[] = ["role", "apps", "setup", "details"];
+
+/**
+ * Where the blob is seen from at each step: close in on a different part of
+ * it each time, the hot orange, the tan highlight, the blue side, the lilac,
+ * so answering the questions walks you round it. Once sent, it pulls back to
+ * the whole object.
+ */
+const JOURNEY: Record<StepId | "done", { azimuth: number; polar: number; zoom: number }> = {
+  role: { azimuth: 270, polar: 180, zoom: 5.4 },
+  apps: { azimuth: 215, polar: 148, zoom: 4.6 },
+  setup: { azimuth: 330, polar: 122, zoom: 4.2 },
+  details: { azimuth: 400, polar: 100, zoom: 3.8 },
+  done: { azimuth: 270, polar: 180, zoom: 1.7 },
+};
+
+/** The choices asked for on each step. */
+const ASKS: Record<Exclude<StepId, "details">, ChoiceId[]> = {
+  role: ["role"],
+  apps: ["apps"],
+  setup: ["machine", "hours"],
+};
 
 /** An answer as one line, with "Other" replaced by what was typed. */
 function describe(a: Answers, id: ChoiceId) {
@@ -264,13 +165,15 @@ function describe(a: Answers, id: ChoiceId) {
     .join(", ");
 }
 
-function canLeave(a: Answers, id: StepId) {
-  if (id === "details") return true;
-  const c = CHOICES[id];
-  const picks = a.picks[id] ?? [];
-  if (c.other && !c.otherOptional && picks.includes(c.other) && !a.other[id]?.trim())
-    return false;
-  return c.kind === "multi" || picks.length > 0;
+function canLeave(a: Answers, step: StepId) {
+  if (step === "details") return true;
+  return ASKS[step].every((id) => {
+    const c = CHOICES[id];
+    const picks = a.picks[id] ?? [];
+    if (c.other && !c.otherOptional && picks.includes(c.other) && !a.other[id]?.trim())
+      return false;
+    return c.kind === "multi" || picks.length > 0;
+  });
 }
 
 /** What to ask for on the last page, given who they said they are. */
@@ -283,7 +186,7 @@ function orgLabel(a: Answers) {
 
 
 const field =
-  "w-full rounded-sm border border-hairline-strong bg-bg px-3 text-base text-ink placeholder:text-ink-subtle transition-colors duration-(--dur-fast) hover:border-edge focus:border-ink focus:outline-none";
+  "w-full rounded-full border border-hairline-strong bg-surface px-5 text-base text-ink placeholder:text-ink-subtle transition-colors duration-(--dur-fast) hover:border-edge focus:border-ink focus:outline-none";
 
 const delay = (ms: number): CSSProperties => ({ animationDelay: `${ms}ms` });
 
@@ -306,7 +209,7 @@ export function EarlyAccess() {
   const [error, setError] = useState("");
   const [emailError, setEmailError] = useState(false);
 
-  const path = route(answers);
+  const path = ROUTE;
   const at = path.indexOf(step);
   const done = status === "sent";
 
@@ -349,7 +252,10 @@ export function EarlyAccess() {
     const target = body.current?.querySelector<HTMLElement>(
       "button, input:not([tabindex='-1']), textarea",
     );
-    target?.focus({ preventScroll: true });
+    // Focus without the ring: someone who clicked their way here shouldn't
+    // see a first choice that looks already picked. Keyboard users still
+    // land on it, and the ring returns as soon as they press Tab.
+    target?.focus({ preventScroll: true, focusVisible: false } as FocusOptions);
   }, [step, done, open]);
 
   const close = useCallback(() => {
@@ -373,10 +279,8 @@ export function EarlyAccess() {
     setStep(to);
   };
 
-  const forward = (a: Answers) => {
-    const p = route(a);
-    const i = p.indexOf(step);
-    if (i < p.length - 1) go(p[i + 1], 1);
+  const forward = () => {
+    if (at < path.length - 1) go(path[at + 1], 1);
   };
 
   const back = () => {
@@ -395,9 +299,11 @@ export function EarlyAccess() {
     const next = { ...answers, picks: { ...answers.picks, [id]: picks } };
     setAnswers(next);
 
+    // A step with one single choice moves on by itself; the setup step,
+    // which asks two, waits for Continue.
     window.clearTimeout(timer.current);
-    if (c.kind === "single" && label !== c.other) {
-      timer.current = window.setTimeout(() => forward(next), ADVANCE_MS);
+    if (c.kind === "single" && label !== c.other && step !== "details" && ASKS[step].length === 1) {
+      timer.current = window.setTimeout(forward, ADVANCE_MS);
     }
   };
 
@@ -405,9 +311,7 @@ export function EarlyAccess() {
     const org = orgLabel(answers);
     const envelope: Envelope = {
       answers: Object.fromEntries(
-        path
-          .filter((id): id is ChoiceId => id !== "details")
-          .map((id) => [id, describe(answers, id)]),
+        (Object.keys(CHOICES) as ChoiceId[]).map((id) => [id, describe(answers, id)]),
       ),
       name: answers.name,
       email: answers.email,
@@ -460,7 +364,7 @@ export function EarlyAccess() {
   const advance = () => {
     if (!canLeave(answers, step)) return;
     if (step === "details") void submit();
-    else forward(answers);
+    else forward();
   };
 
   // Enter in a text box moves on; in the comments box it is a new line.
@@ -475,14 +379,9 @@ export function EarlyAccess() {
     if (e.target === dialog.current) close();
   };
 
-  const progress = done ? 1 : (at + 1) / path.length;
-  const answered = path.filter(
-    (id): id is ChoiceId => id !== "details" && (answers.picks[id]?.length ?? 0) > 0,
-  );
-
   let action = "Continue";
   if (step === "details") action = status === "sending" ? "Sending…" : "Send";
-  else if (CHOICES[step].kind === "multi" && !(answers.picks[step]?.length)) action = "Skip";
+  else if (step === "apps" && !answers.picks.apps?.length) action = "Skip";
 
   return (
     <dialog
@@ -494,130 +393,103 @@ export function EarlyAccess() {
       }}
       onClick={onBackdrop}
       data-closing={closing || undefined}
-      className="modal m-auto h-[min(calc(100svh-2rem),680px)] max-h-none w-[min(calc(100vw-2rem),1000px)] max-w-none overflow-hidden rounded-md border border-hairline-strong bg-bg p-0 text-ink"
+      className="modal m-auto h-[min(calc(100svh-2rem),720px)] max-h-none w-[min(calc(100vw-2rem),1080px)] max-w-none overflow-hidden rounded-lg border border-hairline-strong bg-bg p-0 text-ink"
     >
       {open && (
-        <div className="grid h-full md:grid-cols-[300px_1fr]">
-          {/* The answers, filling in as a spec sheet beside the questions. */}
-          <aside className="hidden flex-col border-r border-hairline bg-surface p-8 md:flex">
-            <h2 className="font-display text-xl tracking-[-0.02em]">Early access</h2>
-            <p className="mt-2 text-sm text-ink-muted">
-              A few questions so we build the right thing first. About a minute.
-            </p>
-            <div className="mt-8 flex flex-col">
-              {answered.map((id) => (
-                <button
-                  key={`${id}:${describe(answers, id)}`}
-                  type="button"
-                  disabled={done}
-                  onClick={() => go(id, path.indexOf(id) < at ? -1 : 1)}
-                  className="row-in group border-t border-hairline py-3 text-left disabled:cursor-default"
-                >
-                  <span className="block font-mono text-2xs tracking-wide text-ink-subtle uppercase">
-                    {CHOICES[id].summary}
-                  </span>
+        <div className="relative h-full">
+          {/* The blob, live, beside the questions; it ends in the corner. */}
+          <div aria-hidden data-done={done || undefined} className="ea-blob">
+            <HeroField view={JOURNEY[done ? "done" : step]} />
+          </div>
+          <div data-done={done || undefined} className="ea-main relative flex h-full min-h-0 flex-col">
+          {/* Where you are: four segments, filling as you go. */}
+          <div className="flex h-20 shrink-0 items-center gap-6 px-6 sm:px-10">
+            <span className={`font-display text-sm tracking-[-0.02em] ${done ? "invisible" : ""}`}>meshrun</span>
+            <div aria-hidden className={`flex flex-1 gap-1.5 ${done ? "invisible" : ""}`}>
+              {path.map((id, i) => (
+                <span key={id} className="h-0.5 flex-1 overflow-hidden rounded-full bg-hairline-strong">
                   <span
-                    className={`mt-0.5 block text-sm transition-colors duration-(--dur-fast) ${
-                      id === step ? "text-accent" : "text-ink group-hover:text-accent"
-                    }`}
-                  >
-                    {describe(answers, id)}
-                  </span>
-                </button>
+                    className="block h-full origin-left bg-accent transition-transform duration-(--dur-slow) ease-expressive"
+                    style={{ transform: `scaleX(${done || i < at ? 1 : i === at ? 0.5 : 0})` }}
+                  />
+                </span>
               ))}
             </div>
-          </aside>
+            {!done && <span className="text-sm text-ink-subtle tabular-nums">{`${at + 1} of ${path.length}`}</span>}
+            <button
+              type="button"
+              onClick={close}
+              aria-label="Close"
+              className="press -mr-2 inline-flex size-10 items-center justify-center rounded-full text-ink-muted transition-colors duration-(--dur-fast) hover:bg-raised hover:text-ink"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" aria-hidden>
+                <path d="M3 3l10 10M13 3 3 13" />
+              </svg>
+            </button>
+          </div>
 
-          <div className="relative flex min-h-0 flex-col">
-            <div className="h-0.5 shrink-0 bg-hairline">
-              <div
-                className="h-full origin-left bg-accent transition-transform duration-(--dur-slow) ease-expressive"
-                style={{ transform: `scaleX(${progress})` }}
-              />
-            </div>
-
-            <div className="flex h-14 shrink-0 items-center justify-between px-6 sm:px-10">
-              <span className="font-display text-md tracking-[-0.02em] md:invisible">
-                Early access
-              </span>
-              <button
-                type="button"
-                onClick={close}
-                aria-label="Close"
-                className="tap -mr-1.5 inline-flex size-7 items-center justify-center rounded-sm text-ink-muted transition-colors duration-(--dur-fast) hover:text-ink"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" aria-hidden>
-                  <path d="M3 3l10 10M13 3 3 13" />
-                </svg>
-              </button>
-            </div>
-
-            <div ref={body} className="scroll min-h-0 flex-1 px-6 pt-4 pb-10 sm:px-10 sm:pt-8">
-              {done ? (
-                <Done email={answers.email.trim()} onClose={close} />
-              ) : (
-                <div
-                  key={step}
-                  className="step-in max-w-2xl"
-                  style={{ "--dir": dir } as CSSProperties}
-                >
-                  {step === "apps" ? (
-                    <SoftwarePicker
-                      picks={answers.picks.apps ?? []}
-                      onToggle={(name) => pick("apps", name)}
-                      onDone={advance}
-                    />
-                  ) : step === "details" ? (
-                    <Details
-                      answers={answers}
-                      setAnswers={setAnswers}
-                      emailError={emailError}
-                      clearEmailError={() => setEmailError(false)}
-                      onFieldKey={onFieldKey}
-                    />
-                  ) : (
-                    <Question
-                      id={step}
-                      answers={answers}
-                      onPick={(label) => pick(step, label)}
-                      onOther={(text) =>
-                        setAnswers({ ...answers, other: { ...answers.other, [step]: text } })
-                      }
-                      onFieldKey={onFieldKey}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-
-            {!done && (
-              <div className="flex h-16 shrink-0 items-center justify-between gap-4 border-t border-hairline px-6 sm:px-10">
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  onClick={back}
-                  className={`-ml-5 ${at === 0 ? "invisible" : ""}`}
-                >
-                  Back
-                </Button>
-                <div className="flex items-center gap-4">
-                  {status === "error" && (
-                    <p role="alert" className="max-w-sm text-right text-sm text-error">
-                      {error}
-                    </p>
-                  )}
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    arrow={step !== "details"}
-                    onClick={advance}
-                    disabled={!canLeave(answers, step) || status === "sending"}
-                  >
-                    {action}
-                  </Button>
-                </div>
+          <div ref={body} className="scroll min-h-0 flex-1 px-6 pt-6 pb-10 sm:px-10 sm:pt-10">
+            {done ? (
+              <Done email={answers.email.trim()} onClose={close} />
+            ) : (
+              <div key={step} className="step-in" style={{ "--dir": dir } as CSSProperties}>
+                {step === "apps" ? (
+                  <SoftwarePicker
+                    picks={answers.picks.apps ?? []}
+                    onToggle={(name) => pick("apps", name)}
+                    onDone={advance}
+                  />
+                ) : step === "details" ? (
+                  <Details
+                    answers={answers}
+                    setAnswers={setAnswers}
+                    emailError={emailError}
+                    clearEmailError={() => setEmailError(false)}
+                    onFieldKey={onFieldKey}
+                  />
+                ) : step === "setup" ? (
+                  <Setup answers={answers} onPick={pick} />
+                ) : (
+                  <Question
+                    id="role"
+                    answers={answers}
+                    onPick={(label) => pick("role", label)}
+                    onOther={(text) => setAnswers({ ...answers, other: { ...answers.other, role: text } })}
+                    onFieldKey={onFieldKey}
+                  />
+                )}
               </div>
             )}
+          </div>
+
+          {!done && (
+            <div className="flex h-20 shrink-0 items-center justify-between gap-4 border-t border-hairline px-6 sm:px-10">
+              <Button
+                variant="ghost"
+                size="lg"
+                onClick={back}
+                className={`-ml-5 ${at === 0 ? "invisible" : ""}`}
+              >
+                Back
+              </Button>
+              <div className="flex items-center gap-4">
+                {status === "error" && (
+                  <p role="alert" className="max-w-sm text-right text-sm text-error">
+                    {error}
+                  </p>
+                )}
+                <Button
+                  variant="primary"
+                  size="lg"
+                  arrow={step !== "details"}
+                  onClick={advance}
+                  disabled={!canLeave(answers, step) || status === "sending"}
+                >
+                  {action}
+                </Button>
+              </div>
+            </div>
+          )}
           </div>
         </div>
       )}
@@ -629,10 +501,50 @@ export function EarlyAccess() {
 
 function Title({ title, hint }: { title: string; hint?: string }) {
   return (
-    <div className="mb-8">
-      <h3 className="font-display text-xl tracking-[-0.02em] text-balance sm:text-2xl">{title}</h3>
-      {hint && <p className="mt-2 text-base text-ink-muted">{hint}</p>}
+    <div className="mb-9">
+      <h3 className="display text-[clamp(26px,3.6vw,38px)] leading-[1.02] text-balance">{title}</h3>
+      {hint && <p className="mt-3 text-base text-ink-muted">{hint}</p>}
     </div>
+  );
+}
+
+/**
+ * The machine and the hours, asked together: two short rows of pills on one
+ * screen rather than two screens of tiles.
+ */
+function Setup({ answers, onPick }: { answers: Answers; onPick: (id: ChoiceId, label: string) => void }) {
+  return (
+    <>
+      <Title title="Your setup" hint="So we size the machines and the plans right." />
+      <div className="flex flex-col gap-9">
+        {(["machine", "hours"] as const).map((id, g) => (
+          <div key={id} role="radiogroup" aria-label={CHOICES[id].title} className="row-in flex flex-col gap-3" style={delay(60 + g * 80)}>
+            <span className="text-base text-ink">{CHOICES[id].title}</span>
+            <div className="flex flex-wrap gap-2">
+              {CHOICES[id].options.map((o) => {
+                const on = answers.picks[id]?.includes(o.label) ?? false;
+                return (
+                  <button
+                    key={o.label}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => onPick(id, o.label)}
+                    className={`press h-12 rounded-full border px-5 text-[15px] transition-colors duration-(--dur-fast) ${
+                      on
+                        ? "border-cta bg-cta font-medium text-on-cta"
+                        : "border-hairline-strong text-ink-muted hover:border-ink/40 hover:text-ink"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -698,7 +610,7 @@ function Question({
                 onChange={(e) => onOther(e.target.value)}
                 onKeyDown={onFieldKey}
                 tabIndex={showOther ? 0 : -1}
-                className={`${field} h-10`}
+                className={`${field} h-12`}
               />
             </label>
           </div>
@@ -735,10 +647,10 @@ function Tile({
       data-on={on}
       onClick={onClick}
       style={style}
-      className="choice row-in flex w-full items-start gap-3 rounded-sm border border-hairline-strong bg-bg px-4 py-3.5 text-left hover:border-edge data-[on=true]:bg-surface"
+      className="choice row-in flex h-full w-full items-start gap-3 rounded-md border border-hairline-strong bg-bg px-5 py-4 text-left hover:border-edge hover:bg-surface data-[on=true]:bg-surface"
     >
       <svg aria-hidden className="trace">
-        <rect width="100%" height="100%" rx="4" pathLength={1} />
+        <rect width="100%" height="100%" rx="16" pathLength={1} />
       </svg>
       {kind === "single" ? (
         <span className="ring mt-[3px] grid size-4 shrink-0 place-items-center rounded-full border border-edge">
@@ -828,7 +740,7 @@ function SoftwarePicker({
           strokeWidth="1.5"
           strokeLinecap="square"
           aria-hidden
-          className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-ink-subtle"
+          className="pointer-events-none absolute top-1/2 left-4.5 -translate-y-1/2 text-ink-subtle"
         >
           <path d="M7 12.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11ZM11 11l3.5 3.5" />
         </svg>
@@ -850,7 +762,7 @@ function SoftwarePicker({
           }}
           onKeyDown={onKey}
           placeholder={`Search ${SOFTWARE.length}+ apps, or type your own`}
-          className={`${field} h-11 pl-10`}
+          className={`${field} h-12 !pl-11`}
         />
       </div>
 
@@ -901,7 +813,7 @@ function SoftwarePicker({
                   }`}
                 >
                   <svg aria-hidden className="trace">
-                    <rect width="100%" height="100%" rx="4" pathLength={1} />
+                    <rect width="100%" height="100%" rx="10" pathLength={1} />
                   </svg>
                   {r.custom ? (
                     <span className="grid size-4 shrink-0 place-items-center text-accent">
@@ -961,7 +873,6 @@ function Details({
   clearEmailError: () => void;
   onFieldKey: (e: KeyboardEvent<HTMLInputElement>) => void;
 }) {
-  const optional = <span className="text-ink-subtle"> · optional</span>;
   const org = orgLabel(answers);
   return (
     <>
@@ -978,23 +889,12 @@ function Details({
         className="absolute -left-[9999px] size-px opacity-0"
       />
       <Title
-        title="Anything else?"
-        hint="Leave an email and we’ll reach out when there’s a spot for you."
+        title="Where do we reach you?"
+        hint="We’ll write when there’s a spot for you. Everything here is optional."
       />
       <div className="grid gap-5 sm:grid-cols-2">
-        <label className="row-in flex flex-col gap-1.5" style={delay(60)}>
-          <span className="text-sm text-ink-muted">Name{optional}</span>
-          <input
-            type="text"
-            autoComplete="name"
-            value={answers.name}
-            onChange={(e) => setAnswers({ ...answers, name: e.target.value })}
-            onKeyDown={onFieldKey}
-            className={`${field} h-10`}
-          />
-        </label>
-        <label className="row-in flex flex-col gap-1.5" style={delay(95)}>
-          <span className="text-sm text-ink-muted">Email{optional}</span>
+        <label className="row-in flex flex-col gap-2 sm:col-span-2" style={delay(60)}>
+          <span className="text-sm text-ink-muted">Email</span>
           <input
             type="email"
             autoComplete="email"
@@ -1005,40 +905,71 @@ function Details({
               setAnswers({ ...answers, email: e.target.value });
             }}
             onKeyDown={onFieldKey}
-            className={`${field} h-10 aria-invalid:border-error`}
+            placeholder="you@example.com"
+            className={`${field} h-12 aria-invalid:border-error`}
           />
           {emailError && (
             <span className="text-sm text-error">That email doesn’t look quite right.</span>
           )}
         </label>
+        <label className="row-in flex flex-col gap-2" style={delay(95)}>
+          <span className="text-sm text-ink-muted">Name</span>
+          <input
+            type="text"
+            autoComplete="name"
+            value={answers.name}
+            onChange={(e) => setAnswers({ ...answers, name: e.target.value })}
+            onKeyDown={onFieldKey}
+            className={`${field} h-12`}
+          />
+        </label>
         {org && (
-          <div className="row-in flex flex-col gap-1.5 sm:col-span-2" style={delay(130)}>
+          <div className="row-in flex flex-col gap-2" style={delay(130)}>
             <OrgField
               kind={org}
-              label={
-                <>
-                  {org}
-                  {optional}
-                </>
-              }
+              label={org}
               value={answers.org}
               onChange={(value) => setAnswers({ ...answers, org: value })}
               onFieldKey={onFieldKey}
             />
           </div>
         )}
-        <label className="row-in flex flex-col gap-1.5 sm:col-span-2" style={delay(165)}>
-          <span className="text-sm text-ink-muted">Comments{optional}</span>
-          <textarea
-            rows={5}
-            value={answers.comments}
-            onChange={(e) => setAnswers({ ...answers, comments: e.target.value })}
-            placeholder="What would make MeshRun a must-have for you?"
-            className={`${field} resize-none py-2.5`}
-          />
-        </label>
+        <Note
+          value={answers.comments}
+          onChange={(comments) => setAnswers({ ...answers, comments })}
+        />
       </div>
     </>
+  );
+}
+
+/** A note to the team, folded away until someone wants to leave one. */
+function Note({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(!!value);
+  const box = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (open) box.current?.focus({ preventScroll: true });
+  }, [open]);
+  return (
+    <div className="row-in sm:col-span-2" style={delay(165)}>
+      {open ? (
+        <label className="flex flex-col gap-2">
+          <span className="text-sm text-ink-muted">Note</span>
+          <textarea
+            ref={box}
+            rows={4}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="What would make meshrun a must-have for you?"
+            className={`${field} resize-none rounded-lg py-3`}
+          />
+        </label>
+      ) : (
+        <button type="button" onClick={() => setOpen(true)} className="link text-sm text-ink-muted">
+          Add a note for the team
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -1152,7 +1083,7 @@ function OrgField({
           onBlur={() => setOpen(false)}
           onKeyDown={onKey}
           placeholder={`Start typing to search ${noun}`}
-          className={`${field} h-10`}
+          className={`${field} h-12`}
         />
         {shown && (
           <ul
@@ -1211,14 +1142,12 @@ function Done({
   if (email) note = `We’ll write to ${email} when there’s a spot for you.`;
 
   return (
-    <div className="step-in flex h-full max-w-lg flex-col justify-center" style={{ "--dir": 1 } as CSSProperties}>
-      <svg viewBox="0 0 48 48" className="plot size-12 text-accent" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" aria-hidden>
-        <circle cx="24" cy="24" r="22" pathLength={1} />
-        <path d="M15 24.5 21.5 31 33.5 18" pathLength={1} style={delay(380)} />
-      </svg>
-      <h3 className="mt-8 font-display text-2xl tracking-[-0.02em]">Thanks, that’s really useful.</h3>
-      <p className="mt-3 text-md text-ink-muted">{note}</p>
-      <div className="mt-8">
+    <div className="step-in flex h-full flex-col justify-end pb-4" style={{ "--dir": 1 } as CSSProperties}>
+      <h3 className="display text-[clamp(48px,8vw,104px)] leading-[0.92]">Thank you</h3>
+      <p className="mt-6 max-w-[40ch] text-md text-ink-muted">
+        That’s really useful. {note}
+      </p>
+      <div className="mt-10">
         <Button size="lg" onClick={onClose}>
           Close
         </Button>

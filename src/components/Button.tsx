@@ -3,22 +3,22 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from 'react'
 type Variant = 'primary' | 'secondary' | 'ghost'
 type Size = 'sm' | 'lg'
 
-// Primary carries the brand colour. It uses the deeper `cta` fill, not the
-// accent itself, so its text passes contrast in both modes.
+// Primary is the page's white with black type; secondary is an outline that
+// fills white when the cursor takes it.
 const variants: Record<Variant, string> = {
   primary: 'bg-cta text-on-cta hover:bg-cta-hover',
-  secondary: 'border border-edge bg-surface text-ink hover:border-ink',
+  secondary: 'border border-ink/30 bg-transparent text-ink hover:border-ink',
   ghost: 'text-ink-muted hover:text-ink',
 }
 
-// The app's 28px control, and a 40px step for the page's few large actions.
+// Pills: a 40px control for bars and a 52px one for the page's actions.
 const sizes: Record<Size, string> = {
-  sm: 'h-7 gap-1.5 px-3 text-xs',
-  lg: 'h-10 gap-2 px-5 text-sm',
+  sm: 'h-10 gap-2 px-4 text-sm',
+  lg: 'h-13 gap-2.5 px-7 text-[15px]',
 }
 
 const base =
-  'group inline-flex shrink-0 items-center rounded-sm font-medium transition-[color,background-color,border-color,transform] duration-(--dur-fast) ease-standard active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40 disabled:grayscale'
+  'group inline-flex shrink-0 items-center rounded-full font-medium transition-[color,background-color,border-color,transform] duration-(--dur-fast) ease-standard active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40 disabled:grayscale'
 
 interface Look {
   variant?: Variant

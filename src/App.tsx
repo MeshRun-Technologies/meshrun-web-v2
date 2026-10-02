@@ -1,28 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, ReactNode, RefObject } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { Button, LinkButton } from "./components/Button";
-import {
-  contact,
-  footer,
-  pillars,
-  steps,
-  targets,
-  targetsNote,
-  trades,
-  yours,
-} from "./content";
-import { EarlyAccess, openEarlyAccess } from "./components/EarlyAccess";
 import { Cursor } from "./components/Cursor";
-import { column, Crosses } from "./components/layout";
-import { Nav, NavSentinel } from "./components/Nav";
-import { ProductCycler } from "./components/ProductCycler";
-import { ScrollCue } from "./components/ScrollCue";
-import { Sheet } from "./components/Sheet";
-import { Stream } from "./components/Stream";
-import { ThemeToggle } from "./components/ThemeToggle";
+import { EarlyAccess, openEarlyAccess } from "./components/EarlyAccess";
+import { HeroField } from "./components/HeroField";
+import { column } from "./components/layout";
+import { Nav, NavSentinel, openMenu } from "./components/Nav";
+import { useHeroHandoff } from "./components/ScrollCue";
 import { Wordmark } from "./components/Wordmark";
-import { Workstation } from "./components/Workstation";
+import { contact, footer, pillars, steps, targets, targetsNote, trades, yours } from "./content";
 import { useReveal } from "./lib/useReveal";
 
 const delay = (ms: number): CSSProperties => ({ animationDelay: `${ms}ms` });
@@ -50,8 +37,32 @@ function Words({
   ));
 }
 
+/** The blob's four tones, in an order where no two neighbours match. */
+const TONES = ["ember", "dune", "ocean", "eclipse"] as const;
+
+/**
+ * Lit things follow the cursor: whatever [data-glow] it is over learns where
+ * it is (--mx, --my, as shares of its box) and its light moves there. One
+ * listener for the page, writing straight to the element, so nothing renders.
+ */
+function useGlow() {
+  useEffect(() => {
+    if (!matchMedia("(hover: hover)").matches) return;
+    const onMove = (event: PointerEvent) => {
+      const el = (event.target as Element | null)?.closest?.<HTMLElement>("[data-glow]");
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--mx", `${(((event.clientX - r.left) / r.width) * 100).toFixed(1)}%`);
+      el.style.setProperty("--my", `${(((event.clientY - r.top) / r.height) * 100).toFixed(1)}%`);
+    };
+    document.addEventListener("pointermove", onMove, { passive: true });
+    return () => document.removeEventListener("pointermove", onMove);
+  }, []);
+}
+
 export function App() {
   useReveal();
+  useGlow();
   return (
     <>
       <Nav />
@@ -73,325 +84,478 @@ export function App() {
 }
 
 /* ------------------------------------------------------------------------ */
-
-// Section padding: generous, so each section breathes between its rules.
-const band = "py-24 sm:py-36";
-
-// A card group drawn as a ruled grid, registration marks on its corners.
-function Ruled({
-  ordered = false,
-  cols = "",
-  className = "",
-  children,
-}: {
-  ordered?: boolean;
-  cols?: string;
-  className?: string;
-  children: ReactNode;
-}) {
-  const List = ordered ? "ol" : "ul";
-  return (
-    // self-start: as a grid child the wrapper would stretch to the row and
-    // carry the crosses past the box's corners.
-    <div className={`relative self-start ${className}`}>
-      <Crosses all />
-      <List className={`ruled ${cols}`}>{children}</List>
-    </div>
-  );
-}
+// Sections are full-bleed tiles in two blacks, alternating down the page the
+// way a product page alternates its surfaces: the change of tone is the
+// divider, so there are no rules between them.
 
 function Section({
   id,
+  alt = false,
   className = "",
   children,
 }: {
   id?: string;
+  alt?: boolean;
   className?: string;
   children: ReactNode;
 }) {
   return (
-    <section id={id} className="rule-bleed scroll-mt-11">
-      <div className={`${column} ${className}`}>
-        <Crosses />
-        {children}
-      </div>
+    <section id={id} className={`scroll-mt-16 ${alt ? "bg-surface" : "bg-bg"}`}>
+      <div className={`${column} ${className}`}>{children}</div>
     </section>
   );
 }
 
-// Mono, uppercase, tracked: the label register from the app.
-function Label({
-  children,
-  className = "",
-  style,
-}: {
-  children: ReactNode;
-  className?: string;
-  style?: CSSProperties;
-}) {
-  return (
-    <p
-      style={style}
-      className={`font-mono text-2xs tracking-wide text-ink-subtle uppercase tabular-nums ${className}`}
-    >
-      {children}
-    </p>
-  );
-}
+const band = "py-24 sm:py-32 lg:py-40";
 
-// Section opener: a display heading whose words fill with ink one after
-// another as the block scrolls into view.
-function Heading({ title, sub }: { title: string; sub?: string }) {
+// Section opener, set to the left: wide capitals whose words fill with ink
+// one after another as the block scrolls in.
+function Heading({ title, sub, className = "" }: { title: string; sub?: string; className?: string }) {
   return (
-    <div className="reveal max-w-2xl">
-      <h2 className="font-display text-2xl tracking-[-0.02em] sm:text-3xl">
+    <div className={`reveal flex max-w-3xl flex-col ${className}`}>
+      <h2 className="display text-[clamp(32px,4.6vw,60px)] leading-[1] text-balance">
         <Words text={title} className="ink" style={stagger} />
       </h2>
-      {sub && <p className="mt-4 text-md text-ink-muted">{sub}</p>}
+      {sub && <p className="mt-6 max-w-[44ch] text-md text-ink-muted text-pretty">{sub}</p>}
     </div>
   );
 }
 
-// 16px stroke icons in the app's register: 1.5px, square caps, no fills. Drawn
-// here rather than pulled from an icon set, so they share the site's pen.
-const icons = {
-  monitor: "M2.5 3.5h11v7h-11zM1 13h14M6.5 13v-2.5h3V13",
-  gauge: "M2.5 12.5a5.5 5.5 0 0 1 11 0M8 12.5 11.2 8M4 7.4l.8.5M8 5.2v1M12 7.4l-.8.5",
-  cpu: "M5 5h6v6H5zM2.5 2.5h11v11h-11zM6 .5v2M10 .5v2M6 13.5v2M10 13.5v2M.5 6h2M.5 10h2M13.5 6h2M13.5 10h2",
-  pointer: "M4 2.5 11.5 7.3 8.3 8.2 9.7 12.1 7.8 12.8 6.4 8.9 4 11.2Z",
-  layers: "M8 1.5 14.5 5 8 8.5 1.5 5ZM2 8.2 8 11.5 14 8.2",
-  drive: "M2 4.5h12v7H2zM4.5 8h4M11.5 7.5v1",
-  shield: "M8 1.5 13.5 4v4.4c0 3-2.4 5.1-5.5 6.1-3.1-1-5.5-3.1-5.5-6.1V4ZM5.5 7.8l2 2 3.2-3.4",
-  terminal: "M2.5 2.5h11v11h-11zM5 6l2 2-2 2M8.5 10.5h3",
-  server: "M2 2.5h12v4.5H2zM2 9h12v4.5H2zM4.5 4.75h1.5M4.5 11.25h1.5",
-  zap: "M9.2 1.5 3.5 9h4l-.7 5.5L12.5 7h-4Z",
-  lock: "M4.5 7V5a3.5 3.5 0 0 1 7 0v2M3 7h10v6.5H3z",
-  coin: "M8 14.5a6.5 6.5 0 1 1 0-13 6.5 6.5 0 0 1 0 13ZM8 3.6v8.8M10 6.2a2 2 0 0 0-2-1.2 1.8 1.8 0 0 0 0 3.5 1.8 1.8 0 0 1 0 3.5 2 2 0 0 1-2-1.2",
-  check: "M3 8.5 6 11.5 13 4.5",
-  cross: "M4 4 12 12M12 4 4 12",
-};
+/* ------------------------------------------------------------------------ */
 
-// The hover outline of a ruled cell; the `ruled` utility plots it.
-function Outline() {
-  return (
-    <svg aria-hidden className="trace">
-      <rect width="100%" height="100%" pathLength={1} />
-    </svg>
-  );
-}
-
-function Icon({ name }: { name: keyof typeof icons }) {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="square"
-      strokeLinejoin="miter"
-      aria-hidden
-    >
-      <path d={icons[name]} />
-    </svg>
-  );
-}
-
-// The landing: a full pane of drawings with the hook sitting in the clearing
-// at its centre. Come near a part and it dimensions itself; move onto it and
-// it opens into the linework underneath.
-const HOOK = "The workstation era is over.";
+// The landing: the live render, the whole object, centred in a black pane
+// with the promise set across it. The line and the action sit at the foot,
+// to the left.
+const HOOK = "CAD without the tower";
 
 function Hero() {
+  useHeroHandoff();
   return (
-    <section
-      id="hero"
-      className="rule-bleed relative flex h-svh min-h-[560px] w-full flex-col justify-center overflow-hidden"
-    >
-      <Sheet />
+    <section id="hero" className="stage relative h-svh min-h-[680px] w-full overflow-hidden">
+      <HeroField />
+      <div aria-hidden className="hero-veil" />
       <NavSentinel />
-      <ScrollCue />
 
-      <div className="relative z-10 flex flex-col items-center px-5 pb-10 text-center sm:px-10">
-        <h1 className="max-w-[16ch] font-display text-[clamp(36px,7.2vw,60px)] leading-[1.04] tracking-[-0.02em] text-balance text-ink">
-          <Words
-            text={HOOK}
-            className="blur-in"
-            style={(i) => delay(120 + i * 70)}
-          />
-        </h1>
+      <header className={`${column} absolute inset-x-0 top-0 z-10 grid h-16 grid-cols-[1fr_auto] items-center sm:h-20 sm:grid-cols-[1fr_auto_1fr]`}>
+        <Wordmark />
+        <nav aria-label="Main" className="hidden gap-8 text-sm text-ink-muted sm:flex">
+          <a href="#platform" className="link">Platform</a>
+          <a href="#session" className="link">How it works</a>
+          <a href="#pricing" className="link">Pricing</a>
+        </nav>
+        <span className="flex items-center gap-1 justify-self-end">
+          <Button onClick={openEarlyAccess}>Request early access</Button>
+          <button
+            type="button"
+            onClick={openMenu}
+            aria-label="Open menu"
+            className="press -mr-2 inline-flex size-10 items-center justify-center rounded-full text-ink-muted hover:text-ink sm:hidden"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" aria-hidden>
+              <path d="M2 5h12M2 11h12" />
+            </svg>
+          </button>
+        </span>
+      </header>
 
-        <p
-          className="row-in mt-7 flex flex-wrap items-center justify-center gap-x-[0.4em] gap-y-2 text-[clamp(17px,2.9vw,24px)] leading-tight text-ink-muted sm:mt-9"
-          style={delay(520)}
-        >
-          {/* The cycler carries the whole sentence for screen readers, so the
-              words either side of it are decoration. */}
-          <span aria-hidden>Run</span>
-          <ProductCycler />
-          <span aria-hidden>on anything.</span>
+      {/* Set on the sphere's centre, which is the pane's. */}
+      <h1 className="display absolute inset-x-0 top-1/2 z-10 mx-auto max-w-[11ch] -translate-y-1/2 px-5 text-center text-[clamp(40px,7.4vw,104px)] leading-[0.98] text-balance">
+        <Words text={HOOK} className="blur-in" style={(i) => delay(160 + i * 80)} />
+      </h1>
+
+      <div className={`${column} absolute inset-x-0 bottom-0 z-10 flex flex-col gap-6 pb-10 sm:flex-row sm:items-center sm:gap-10 sm:pb-12`}>
+        <p className="row-in max-w-[30ch] text-[clamp(16px,1.5vw,19px)] text-ink-muted" style={delay(620)}>
+          Windows-only CAD, on the Mac you already own.
         </p>
+        <span className="row-in" style={delay(720)}>
+          <Button variant="primary" size="lg" arrow onClick={openEarlyAccess}>
+            Request early access
+          </Button>
+        </span>
       </div>
     </section>
   );
 }
 
-// The measured claims, as a ruled pair of rows.
+// The measured claims, as four wide figures. Under the cursor a figure fills
+// with its own slice of the blob; the others step back.
 function Targets() {
   return (
-    <Section id="platform" className={band}>
+    <Section id="platform" className={`${band} text-center`}>
       <Heading
-        title="CAD in the Cloud"
-        sub="MeshRun streams full windows CAD from powerful cloud PCs straight to your screen."
+        className="mx-auto items-center"
+        title="CAD in the cloud"
+        sub="meshrun streams full Windows CAD from powerful cloud PCs straight to your screen."
       />
-      <Ruled className="mt-12" cols="sm:grid-cols-2">
+      <ul className="figures mt-16 grid grid-cols-2 gap-x-6 gap-y-14 sm:mt-24 lg:grid-cols-4">
         {targets.map((t, i) => (
-          <li key={t.value} style={stagger(i)} className="reveal p-6">
-            <Outline />
-            <div className="flex items-start gap-4">
-              <span className="mt-0.5 text-accent">
-                <Icon name={t.icon} />
+          <li
+            key={t.figure}
+            data-glow
+            data-tone={TONES[i % TONES.length]}
+            style={stagger(i)}
+            className="reveal flex flex-col items-center gap-3 py-4"
+          >
+            <span className="display relative text-[clamp(32px,4vw,56px)] leading-none whitespace-nowrap">
+              {t.figure}
+              <span aria-hidden className="figure-glow">
+                {t.figure}
               </span>
-              <div>
-                <Label>{t.label}</Label>
-                <h3 className="mt-2 font-display text-lg tracking-[-0.02em] text-ink">
-                  {t.value}
-                </h3>
-                <p className="mt-2 text-base text-ink-muted">{t.detail}</p>
-              </div>
-            </div>
+            </span>
+            <span className="max-w-[18ch] text-base text-ink-muted">{t.caption}</span>
           </li>
         ))}
-      </Ruled>
-      <Label className="reveal mt-6">{targetsNote}</Label>
+      </ul>
+      <p className="reveal mt-16 text-sm text-ink-subtle">{targetsNote}</p>
     </Section>
   );
 }
 
-// What the product is. Whichever pillar you are on opens and takes the raised
-// surface; the rest fold to their title. Height eases through
-// grid-template-rows, so it moves from the real content height.
-function Pillars() {
-  const [active, setActive] = useState(0);
+// What the product is: the object, live, at the centre of the four things it
+// gives you, laid out round it like callouts on a drawing.
+const PLACE = [
+  "lg:col-start-1 lg:row-start-1",
+  "lg:col-start-3 lg:row-start-1",
+  "lg:col-start-1 lg:row-start-2",
+  "lg:col-start-3 lg:row-start-2",
+];
 
+/** Where the blob turns for each tile: it only rotates, it never comes closer. */
+const TONE_VIEWS = [
+  { azimuth: 200, polar: 180, zoom: 1 },
+  { azimuth: 330, polar: 160, zoom: 1 },
+  { azimuth: 250, polar: 135, zoom: 1 },
+  { azimuth: 360, polar: 150, zoom: 1 },
+] as const;
+
+function Pillars() {
+  const [hovered, setHovered] = useState<number | null>(null);
   return (
-    <Section id="experience" className={band}>
-      <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
-        <Heading
-          title="What We Deliver"
-          sub="Not a clunky band-aid solution. Just your apps running cleanly on Mac."
-        />
-        <div className="border-t border-hairline">
-          {pillars.map((p, i) => {
-            const on = i === active;
-            return (
-              <button
-                key={p.title}
-                type="button"
-                aria-expanded={on}
-                onMouseEnter={() => setActive(i)}
-                onFocus={() => setActive(i)}
-                onClick={() => setActive(i)}
-                style={stagger(i)}
-                className={`reveal block w-full border-b border-hairline px-4 py-5 text-left transition-colors duration-(--dur-slow) ease-(--ease-expressive) ${
-                  on ? "bg-raised" : "bg-transparent"
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <span
-                    className={`transition-colors duration-(--dur-slow) ${
-                      on ? "text-accent" : "text-ink-subtle"
-                    }`}
-                  >
-                    <Icon name={p.icon} />
-                  </span>
-                  <h3
-                    className={`font-display text-lg tracking-[-0.02em] transition-colors duration-(--dur-slow) ${
-                      on ? "text-ink" : "text-ink-muted"
-                    }`}
-                  >
-                    {p.title}
-                  </h3>
-                </div>
-                <div
-                  className="grid transition-[grid-template-rows] duration-(--dur-slow) ease-(--ease-expressive)"
-                  style={{ gridTemplateRows: on ? "1fr" : "0fr" }}
-                >
-                  <div className="overflow-hidden">
-                    <p className="pt-3 pl-9 text-base text-ink-muted">
-                      {p.body}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+    <Section id="experience" alt className={band}>
+      <Heading title="What we deliver" sub="Not a clunky band-aid solution. Just your apps running cleanly on Mac." />
+      <div className="tiles mt-14 grid gap-3 sm:mt-20 lg:grid-cols-[1fr_1.25fr_1fr] lg:grid-rows-2">
+        <div
+          aria-hidden
+          className="relative order-first aspect-square overflow-hidden rounded-lg bg-bg lg:order-none lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:aspect-auto"
+        >
+          <HeroField view={hovered === null ? undefined : TONE_VIEWS[hovered % TONE_VIEWS.length]} />
         </div>
+        {pillars.map((p, i) => (
+          <article
+            key={p.title}
+            data-tile
+            data-glow
+            data-tone={TONES[i % TONES.length]}
+            style={stagger(i)}
+            onPointerEnter={() => setHovered(i)}
+            onPointerLeave={() => setHovered(null)}
+            className={`reveal flex min-h-60 flex-col justify-end gap-3 rounded-lg border border-hairline-strong bg-bg p-8 ${PLACE[i]}`}
+          >
+            <h3 className="text-xl font-medium tracking-[-0.02em]">{p.title}</h3>
+            <p className="muted text-base text-ink-muted">{p.body}</p>
+          </article>
+        ))}
       </div>
     </Section>
   );
 }
 
-/**
- * No pointer means no hover, so on a phone the rows turn over as they pass the
- * middle of the screen instead of waiting for one that never comes.
- */
-function useFlipOnPass(ref: RefObject<HTMLUListElement | null>) {
-  useEffect(() => {
-    const list = ref.current;
-    if (!list || matchMedia("(hover: hover)").matches) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          (entry.target as HTMLElement).dataset.flip = entry.isIntersecting
-            ? "on"
-            : "off";
-        }
-      },
-      // A band across the middle of the viewport, one row deep.
-      { rootMargin: "-46% 0px -46% 0px" },
-    );
-    for (const row of list.querySelectorAll("li")) observer.observe(row);
-    return () => observer.disconnect();
-  }, [ref]);
-}
-
-// The trade, one row at a time: what buying costs, what renting returns.
+// The trade, as a switch big enough to notice, that flips to renting as the
+// reader scrolls it up the screen: owning the box is flat and grey, renting
+// floods the panel with the render. A click takes it over from there.
 function Cost() {
-  const listRef = useRef<HTMLUListElement>(null);
-  useFlipOnPass(listRef);
+  const [rent, setRent] = useState(false);
+  const panel = useRef<HTMLDivElement>(null);
+  const touched = useRef(false);
+
+  // Until someone picks a side, the switch follows the scroll: it owns the
+  // box while the panel is below the middle of the screen, and rents once
+  // the panel reaches it (and back again on the way up).
+  useEffect(() => {
+    const el = panel.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (touched.current) return;
+        if (entry.isIntersecting) setRent(true);
+        else if (entry.boundingClientRect.top > innerHeight / 2) setRent(false);
+      },
+      { rootMargin: "-50% 0px -50% 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const flip = (value: boolean) => {
+    touched.current = true;
+    setRent(value);
+  };
+  const rows = trades.map((t) => (rent ? t.gain : t.cost));
+  const options: [string, boolean][] = [
+    ["Own a workstation", false],
+    ["Rent with meshrun", true],
+  ];
 
   return (
     <Section id="how" className={band}>
       <Heading
-        title="You don’t need to own a workstation, You need power for a few hours a week."
+        title="Rent the power, not the box"
+        sub="You don’t need to own a workstation. You need power for a few hours a week."
       />
-      <ul ref={listRef} className="mt-12 border-t border-hairline">
-        {trades.map((t, i) => (
+      <div
+        ref={panel}
+        data-rent={rent}
+        className="cost-panel reveal mt-14 rounded-lg border border-hairline-strong bg-surface p-6 sm:mt-20 sm:p-10"
+      >
+        <div role="group" aria-label="Compare" className="relative grid grid-cols-2 rounded-full bg-bg/70 p-1.5">
+          <span
+            aria-hidden
+            className="absolute inset-y-1.5 left-1.5 w-[calc(50%-6px)] rounded-full bg-ink transition-transform duration-700 ease-expressive"
+            style={{ transform: rent ? "translateX(100%)" : "none" }}
+          />
+          {options.map(([label, value]) => (
+            <button
+              key={label}
+              type="button"
+              aria-pressed={rent === value}
+              onClick={() => flip(value)}
+              className={`press relative h-16 rounded-full text-[clamp(15px,1.8vw,22px)] font-medium tracking-[-0.01em] transition-colors duration-500 sm:h-20 ${
+                rent === value ? "text-on-cta" : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <ul key={String(rent)} aria-live="polite" className="mt-10 grid gap-x-12 sm:mt-12 lg:grid-cols-2">
+          {rows.map((row, i) => (
+            <li
+              key={row}
+              style={delay(i * 60)}
+              className={`row-in flex items-baseline gap-4 border-t py-5 text-[clamp(18px,1.9vw,24px)] leading-snug tracking-[-0.015em] ${
+                rent ? "border-black/15" : "border-hairline-strong text-ink-subtle"
+              }`}
+            >
+              <span aria-hidden className="w-5 shrink-0 text-base">
+                {rent ? "+" : "−"}
+              </span>
+              {row}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Section>
+  );
+}
+
+// The machine's states, as the app shows them, keyed to the steps of a session:
+// where the camera sits on the live blob for each, closing in and coming
+// round as the session moves on.
+const MACHINE = [
+  { state: "asleep", label: "Asleep", detail: "Not using hours", view: { azimuth: 270, polar: 180, zoom: 0.78 } },
+  { state: "picked", label: "Revit", detail: "~/Projects/tower-B", view: { azimuth: 225, polar: 162, zoom: 1.0 } },
+  { state: "booting", label: "Waking up", detail: "Mounting your folder", view: { azimuth: 320, polar: 142, zoom: 1.35 } },
+  { state: "live", label: "Live", detail: "Hours stop when you close it", view: { azimuth: 380, polar: 124, zoom: 1.85 } },
+] as const;
+
+/** How far apart the steps sit in the scroll, as a share of the screen. */
+const STEP_SPAN = 0.5;
+/** Long enough for the smooth scroll to land before the next tick counts. */
+const STEP_MS = 760;
+
+/**
+ * The session as the app runs it, as one pinned screen. Each wheel tick moves
+ * one step, like the landing's hand-off, so four ticks cover it: the step's
+ * words change on the left, and on the right the machine, the live render,
+ * comes round and closes in, warming from asleep to live. The pane is ordinary scroll underneath, so the
+ * scrollbar, keys and trackpads all still move through it. Phones get the
+ * steps as a plain list.
+ */
+function Session() {
+  const [active, setActive] = useState(0);
+  const activeRef = useRef(0);
+  const pane = useRef<HTMLDivElement>(null);
+  const markers = useRef<HTMLDivElement>(null);
+
+  // Which step is current: whichever marker the middle of the screen is in.
+  useEffect(() => {
+    const items = [...(markers.current?.children ?? [])];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const i = items.indexOf(entry.target);
+          activeRef.current = i;
+          setActive(i);
+        }
+      },
+      { rootMargin: "-50% 0px -50% 0px" },
+    );
+    items.forEach((item) => observer.observe(item));
+    return () => observer.disconnect();
+  }, []);
+
+  // One tick, one step, while the pane is pinned; past either end the page
+  // scrolls on as usual.
+  useEffect(() => {
+    let moving = false;
+    const onWheel = (event: WheelEvent) => {
+      const el = pane.current;
+      if (!el || !matchMedia("(min-width: 1024px)").matches || !event.deltaY) return;
+      if (document.documentElement.style.overflow === "hidden") return;
+      const rect = el.getBoundingClientRect();
+      const pinned = rect.top <= 2 && rect.bottom >= innerHeight - 2;
+      if (!pinned) return;
+      if (moving) {
+        event.preventDefault();
+        return;
+      }
+      const next = activeRef.current + (event.deltaY > 0 ? 1 : -1);
+      if (next < 0 || next >= MACHINE.length) return;
+      event.preventDefault();
+      moving = true;
+      const top = scrollY + rect.top + next * STEP_SPAN * innerHeight;
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top, behavior: reduced ? "auto" : "smooth" });
+      window.setTimeout(() => {
+        moving = false;
+      }, STEP_MS);
+    };
+    window.addEventListener("wheel", onWheel, { passive: false });
+    return () => window.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // Phones: the step whose card is in the middle of the screen.
+  const [mobileActive, setMobileActive] = useState(0);
+  const mobileList = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    const items = [...(mobileList.current?.children ?? [])];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) if (entry.isIntersecting) setMobileActive(items.indexOf(entry.target));
+      },
+      { rootMargin: "-45% 0px -45% 0px" },
+    );
+    items.forEach((item) => observer.observe(item));
+    return () => observer.disconnect();
+  }, []);
+
+  const machine = MACHINE[active];
+  const step = steps[active];
+
+  return (
+    <section id="session" className="scroll-mt-16 bg-surface">
+      {/* Phones: the steps as a list, each with the state it puts the machine in. */}
+      <div className={`${column} py-24 sm:py-32 lg:hidden`}>
+        <Heading
+          title="From Dock to design"
+          sub="Everything from opening the app to getting to work takes as little as 45 seconds."
+        />
+        {/* The machine rides along at the top, coming round and closing in. */}
+        <div className="sticky top-20 z-10 mt-10 flex justify-end">
+          <div data-state={MACHINE[mobileActive].state} className="machine relative grid size-28 place-items-center">
+            <div className="machine-orb relative size-full overflow-hidden rounded-full">
+              <HeroField view={MACHINE[mobileActive].view} />
+            </div>
+          </div>
+        </div>
+        <ol ref={mobileList} className="-mt-28">
+          {steps.map((s, i) => (
+            <li key={s.step} className="flex flex-col gap-4 border-t border-hairline-strong py-10 pr-32">
+              <span className="text-sm text-accent">{s.step.replace("Step ", "")}</span>
+              <h3 className="display text-[clamp(26px,6vw,36px)] leading-[1.02]">{s.title}</h3>
+              <p className="max-w-[38ch] text-md text-ink-muted">{s.body}</p>
+              <span className="mt-1 inline-flex w-fit items-center gap-2.5 rounded-full border border-ink/15 px-4 py-2 text-sm text-ink">
+                {MACHINE[i].label}
+                <span className="text-ink-subtle">{MACHINE[i].detail}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {/* Desktop: one pinned screen, stepped through. */}
+      <div
+        ref={pane}
+        className="relative hidden lg:block"
+        style={{ height: `calc(100svh + ${(MACHINE.length - 1) * STEP_SPAN * 100}svh)` }}
+      >
+        <div ref={markers} aria-hidden className="pointer-events-none absolute inset-0">
+          {MACHINE.map((_, i) => (
+            <div
+              key={i}
+              className="absolute inset-x-0"
+              style={{
+                top: i === 0 ? 0 : `${(i * STEP_SPAN + STEP_SPAN / 2) * 100}svh`,
+                height: `${(i === 0 || i === MACHINE.length - 1 ? STEP_SPAN * 1.5 : STEP_SPAN) * 100}svh`,
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="sticky top-0 h-svh">
+          <div className={`${column} grid h-full grid-cols-[1fr_1fr] items-center gap-20 pt-16`}>
+            <div className="flex flex-col gap-14">
+              <Heading
+                title="From Dock to design"
+                sub="Everything from opening the app to getting to work takes as little as 45 seconds."
+              />
+              <div className="flex flex-col gap-6">
+                <div aria-hidden className="flex gap-2">
+                  {MACHINE.map((m, i) => (
+                    <span
+                      key={m.state}
+                      className={`h-1 w-10 rounded-full transition-colors duration-500 ${i <= active ? "bg-accent" : "bg-hairline-strong"}`}
+                    />
+                  ))}
+                </div>
+                <div key={active} className="step-in flex min-h-52 flex-col gap-4" style={{ "--dir": 1 } as CSSProperties}>
+                  <span className="text-sm text-accent">{step.step.replace("Step ", "")} of 04</span>
+                  <h3 className="display text-[clamp(30px,3.2vw,46px)] leading-[1.02]">{step.title}</h3>
+                  <p className="max-w-[40ch] text-md text-ink-muted">{step.body}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-10">
+              <div data-state={machine.state} className="machine relative grid size-[min(42vw,72svh,640px)] place-items-center">
+                <div className="machine-orb relative size-full overflow-hidden rounded-full">
+                  <HeroField view={machine.view} />
+                </div>
+              </div>
+              <div role="status" className="flex items-center gap-3 rounded-full border border-ink/15 bg-bg/60 px-5 py-2.5 text-[15px]">
+                <span className={`size-2 rounded-full ${machine.state === "live" ? "bg-accent" : "border border-ink/40"}`} />
+                <span className="text-ink">{machine.label}</span>
+                <span className="text-ink-subtle">{machine.detail}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Files and licensing, as three tiles.
+function Yours() {
+  return (
+    <Section id="privacy" className={band}>
+      <Heading
+        title="Your files and licence stay yours"
+        sub="Renting compute shouldn’t mean giving up control of your files or buying software twice."
+      />
+      <ul className="tiles mt-14 grid gap-3 sm:mt-20 lg:grid-cols-3">
+        {yours.map((y, i) => (
           <li
-            key={t.cost}
-            data-flip="off"
+            key={y.title}
+            data-tile
+            data-glow
+            data-tone={(["ember", "ocean", "dune"] as const)[i % 3]}
             style={stagger(i)}
-            className="trade reveal group flex items-center gap-4 border-b border-hairline py-5"
+            className="reveal flex min-h-60 flex-col gap-3 rounded-lg border border-hairline-strong bg-surface p-8 pt-24"
           >
-            <span className="relative inline-grid size-4 shrink-0 place-items-center">
-              <span className="was col-start-1 row-start-1 text-ink-subtle">
-                <Icon name="cross" />
-              </span>
-              <span className="now col-start-1 row-start-1 text-accent">
-                <Icon name="check" />
-              </span>
-            </span>
-            <span className="grid flex-1">
-              <span className="was col-start-1 row-start-1 text-md text-ink-muted">
-                {t.cost}
-              </span>
-              <span className="now col-start-1 row-start-1 text-md text-ink">
-                {t.gain}
-              </span>
-            </span>
+            <h3 className="text-xl font-medium tracking-[-0.02em]">{y.title}</h3>
+            <p className="muted text-base text-ink-muted">{y.body}</p>
           </li>
         ))}
       </ul>
@@ -399,88 +563,26 @@ function Cost() {
   );
 }
 
-// The session, start to finish.
-function Session() {
-  return (
-    <Section id="session" className={band}>
-      <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
-        <div>
-          <Heading
-            title="How a session works"
-            sub="Everything from opening the app to getting to work takes as little as 45 seconds."
-          />
-          {/* The whole thing drawn: the workstation's picture streamed to the
-              Mac. It plots as the section scrolls in. */}
-          <div className="reveal mt-12 hidden lg:block">
-            <Stream className="w-full max-w-sm text-ink-subtle" />
-          </div>
-        </div>
-        <Ruled ordered>
-          {steps.map((s, i) => (
-            <li
-              key={s.step}
-              style={stagger(i)}
-              className="reveal grid grid-cols-[4.5rem_1fr] gap-4 p-6"
-            >
-              <Outline />
-              <Label className="text-accent">{s.step}</Label>
-              <div>
-                <h3 className="font-display text-lg tracking-[-0.02em] text-ink">
-                  {s.title}
-                </h3>
-                <p className="mt-1 text-base text-ink-muted">{s.body}</p>
-              </div>
-            </li>
-          ))}
-        </Ruled>
-      </div>
-    </Section>
-  );
-}
-
-// Files and licensing.
-function Yours() {
-  return (
-    <Section id="privacy" className={band}>
-      <Heading
-        title="Your files and your licence stay yours."
-        sub="Renting compute shouldn’t mean giving up control of your files or buying software twice."
-      />
-      <Ruled className="mt-12" cols="sm:grid-cols-3">
-        {yours.map((y, i) => (
-          <li key={y.title} style={stagger(i)} className="reveal p-6">
-            <Outline />
-            <span className="text-accent">
-              <Icon name={y.icon} />
-            </span>
-            <h3 className="mt-5 font-display text-lg tracking-[-0.02em] text-ink">
-              {y.title}
-            </h3>
-            <p className="mt-2 text-base text-ink-muted">{y.body}</p>
-          </li>
-        ))}
-      </Ruled>
-    </Section>
-  );
-}
-
 // Pricing, which is a notice rather than a table until there is one.
 function Pricing() {
   return (
-    <Section id="pricing" className={band}>
-      <Heading
-        title="Pay for what you need."
-        sub="Plans sized to how you actually work, so you get the power you need without paying for hours you never use. Whether you’re a student or running a studio, there’s an option that fits. We don’t sell licenses, get those from your software provider."
-      />
-      <div className="reveal mt-12 flex max-w-2xl items-start gap-4 border border-hairline bg-surface p-6">
-        <span className="mt-0.5 shrink-0 text-accent">
-          <Icon name="coin" />
-        </span>
-        <p className="text-base text-ink-muted">
-          <span className="text-ink">Pricing Coming Soon.</span> We&rsquo;re
-          still in development, and will post information when it&rsquo;s
-          available.
-        </p>
+    <Section id="pricing" alt className={band}>
+      <div className="grid gap-14 lg:grid-cols-[1fr_1.35fr] lg:items-end lg:gap-20">
+        <Heading
+          title="Pay for what you need"
+          sub="Plans sized to how you actually work, so you never pay for hours you don’t use. Licences come from your software provider, not us."
+        />
+        <div className="reveal flex flex-col gap-6 rounded-lg border border-hairline-strong bg-bg p-9 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-3">
+            <p className="display text-[clamp(22px,2.4vw,32px)] leading-tight">Pricing coming soon</p>
+            <p className="max-w-[36ch] text-base text-ink-muted">
+              We’re still in development, and will post plans when they’re ready.
+            </p>
+          </div>
+          <Button variant="primary" size="lg" onClick={openEarlyAccess}>
+            Request early access
+          </Button>
+        </div>
       </div>
     </Section>
   );
@@ -488,90 +590,69 @@ function Pricing() {
 
 function Closing() {
   return (
-    <Section className={`${band} text-center`}>
-      <div className="reveal mx-auto flex max-w-xl flex-col items-center">
-        <Workstation className="w-24 text-ink-subtle" />
-        <h2 className="mt-8 font-display text-2xl tracking-[-0.02em] text-balance text-ink sm:text-3xl">
-          Carry the laptop you love. Run the software it can&rsquo;t.
+    <section className="relative flex min-h-[900px] items-center justify-center overflow-hidden bg-bg py-24 text-center">
+      <HeroField view={{ azimuth: 300, polar: 160, zoom: 1.45 }} />
+      <div aria-hidden className="closing-veil absolute inset-0" />
+      <div className={`${column} reveal relative flex flex-col items-center gap-6`}>
+        <h2 className="display max-w-[12ch] text-[clamp(40px,6.6vw,96px)] leading-[0.96] text-balance">
+          Leave the tower behind
         </h2>
-        <p className="mt-4 text-md text-ink-muted">
-          MeshRun isn&rsquo;t available yet. Tell us how you want to get more
-          out of your laptop and we&rsquo;ll get in touch.
+        <p className="max-w-[38ch] text-md text-ink-muted">
+          Carry the laptop you love. Run the software it can’t. meshrun isn’t available yet; tell us how you work and
+          we’ll be in touch.
         </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Button variant="primary" size="lg" arrow onClick={openEarlyAccess}>
-            Request Early Access
+        <div className="pair mt-2 flex flex-wrap justify-center gap-3">
+          <Button variant="primary" size="lg" onClick={openEarlyAccess}>
+            Request early access
           </Button>
           <LinkButton href={`mailto:${contact}`} size="lg">
             {contact}
           </LinkButton>
         </div>
-        <Label className="mt-6">
-          We don&rsquo;t sell licences · Not affiliated with Autodesk.
-        </Label>
       </div>
-    </Section>
+    </section>
   );
 }
 
+const FOOTER_LINKS = [
+  ["Product", [["Platform", "#platform"], ["What we deliver", "#experience"], ["How it works", "#session"], ["Pricing", "#pricing"]]],
+  ["Company", [["Privacy", "#privacy"], ["Contact", `mailto:${contact}`], ["Early access", "#"]]],
+] as const;
+
 function Footer() {
   return (
-    <footer>
-      <Section className="py-16 sm:py-20">
-        <div className="grid gap-12 lg:grid-cols-[1fr_1.5fr]">
-          <div>
-            <p className="reveal max-w-xs text-md text-ink-muted">
-              {footer.blurb}
+    <footer className="bg-surface">
+      <div className={`${column} flex flex-col gap-14 pt-20 pb-10`}>
+        <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr]">
+          <div className="flex flex-col gap-5">
+            <Wordmark />
+            <p className="max-w-[40ch] text-base text-ink-muted">{footer.blurb}</p>
+          </div>
+          {FOOTER_LINKS.map(([heading, links]) => (
+            <nav key={heading} aria-label={heading} className="flex flex-col gap-3 text-sm">
+              <span className="font-medium text-ink">{heading}</span>
+              {links.map(([label, href]) => (
+                <a
+                  key={label}
+                  href={href}
+                  onClick={label === "Early access" ? (e) => (e.preventDefault(), openEarlyAccess()) : undefined}
+                  className="link w-fit text-ink-muted"
+                >
+                  {label}
+                </a>
+              ))}
+            </nav>
+          ))}
+        </div>
+        <div className="flex flex-col gap-3 border-t border-hairline-strong pt-8 text-xs text-ink-subtle">
+          {footer.notices.map((notice) => (
+            <p key={notice.slice(0, 24)} className="max-w-5xl">
+              {notice}
             </p>
-            <Label className="reveal mt-5">{footer.entity}</Label>
-          </div>
-          <div className="reveal flex flex-col gap-4">
-            {footer.notices.map((notice) => (
-              <p key={notice.slice(0, 24)} className="text-sm text-ink-subtle">
-                {notice}
-              </p>
-            ))}
-          </div>
-        </div>
-        {/* Each letter rises into place from below the clip as the footer
-            scrolls in; the observer lifts .pre from the line. */}
-        <div className="@container mt-16 sm:mt-20">
-          {/* Sized to the column, not the viewport: the word spans rail to rail.
-              "meshrun" advances 3.89em at this tracking; the end padding gives
-              the last letter back the tracking it would otherwise lose to the clip. */}
-          <p
-            aria-hidden
-            className="lift pe-[0.05em] font-display text-[25.6cqw] leading-none tracking-[-0.05em] whitespace-nowrap text-ink select-none"
-          >
-            {[..."meshrun"].map((c, i, all) => (
-              <span
-                key={i}
-                style={
-                  {
-                    ...stagger(i),
-                    "--stagger-out": `${(all.length - 1 - i) * 40}ms`,
-                  } as CSSProperties
-                }
-              >
-                {c}
-              </span>
-            ))}
+          ))}
+          <p className="mt-2">
+            {footer.entity} {footer.copyright}
           </p>
-        </div>
-      </Section>
-      <div
-        className={`${column} flex flex-col gap-6 py-6 sm:flex-row sm:items-center sm:justify-between`}
-      >
-        <Wordmark />
-        <div className="flex items-center gap-6">
-          <p className="text-sm text-ink-muted">{footer.copyright}</p>
-          <a
-            href={`mailto:${contact}`}
-            className="text-sm text-ink-muted transition-colors duration-(--dur-fast) hover:text-ink"
-          >
-            {contact}
-          </a>
-          <ThemeToggle />
         </div>
       </div>
     </footer>

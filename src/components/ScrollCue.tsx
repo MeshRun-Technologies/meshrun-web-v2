@@ -19,14 +19,12 @@ const behavior = (): ScrollBehavior =>
   matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
 
 /**
- * The way out of the landing pane, and back into it.
- *
- * The pane behaves as a single screen: one tick down hands over to the page
- * rather than scrolling the drawings away line by line, and one tick up from
- * the top of the page brings the whole pane back. The cue does the same thing
- * for anyone who would rather press it.
+ * The landing pane behaves as a single screen: one wheel tick down hands over
+ * to the page rather than scrolling the render away line by line, and one
+ * tick up from the top of the page brings the whole pane back. Returns the
+ * hand-off itself, for anything that wants to trigger it.
  */
-export function ScrollCue() {
+export function useHeroHandoff() {
   const moving = useRef(false);
 
   const toContent = useCallback(() => {
@@ -65,6 +63,13 @@ export function ScrollCue() {
     window.addEventListener("wheel", onWheel, { passive: false });
     return () => window.removeEventListener("wheel", onWheel);
   }, [toContent]);
+
+  return toContent;
+}
+
+/** The hand-off as a control: a chevron at the foot of the pane. */
+export function ScrollCue() {
+  const toContent = useHeroHandoff();
 
   return (
     <button

@@ -17,3 +17,7 @@ CLAUDE.md
 .impeccable/hook.cache.json
 .impeccable/live/inject-journal.json
 .impeccable/config.local.json
+
+# Local design review captures.
+.impeccable/review/
+.impeccable/shot.sh

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "./Button";
+import { HeroField } from "./HeroField";
 import { openEarlyAccess } from "./EarlyAccess";
-import { column, Crosses } from "./layout";
-import { ThemeToggle } from "./ThemeToggle";
+import { contact } from "../content";
+import { column } from "./layout";
 import { Wordmark } from "./Wordmark";
 
 const NAV_LINKS = [
@@ -13,11 +14,26 @@ const NAV_LINKS = [
   ["Pricing", "#pricing"],
 ] as const;
 
+const MENU_EVENT = "meshrun:menu";
+
+/** Opens the menu from anywhere, such as the landing's own header. */
+export function openMenu() {
+  window.dispatchEvent(new Event(MENU_EVENT));
+}
+
+/** Where the blob turns for each link, so pressing one turns it. */
+const LINK_VIEWS = [
+  { azimuth: 200, polar: 180, zoom: 1 },
+  { azimuth: 330, polar: 160, zoom: 1 },
+  { azimuth: 250, polar: 135, zoom: 1 },
+  { azimuth: 360, polar: 150, zoom: 1 },
+];
+
 /** Long enough for the rows to lift away and the sheet to retract behind them. */
 const MENU_EXIT_MS = 500;
 
 const icons = {
-  menu: "M2 4h12M2 8h12M2 12h12",
+  menu: "M2 5h12M2 11h12",
   close: "M3 3l10 10M13 3 3 13",
 };
 
@@ -39,7 +55,7 @@ function IconButton({
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="tap inline-flex size-7 items-center justify-center rounded-sm text-ink-muted transition-colors duration-(--dur-fast) hover:text-ink"
+      className="press -mr-2 inline-flex size-10 items-center justify-center rounded-full text-ink-muted transition-colors duration-(--dur-fast) hover:text-ink"
     >
       <svg
         width="16"
@@ -121,6 +137,7 @@ function useScrollLock() {
  */
 function Menu({ closing, onClose }: { closing: boolean; onClose: () => void }) {
   useScrollLock();
+  const [turn, setTurn] = useState<number | null>(null);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -140,10 +157,9 @@ function Menu({ closing, onClose }: { closing: boolean; onClose: () => void }) {
       }`}
     >
       <div className={`${column} flex h-full flex-col`}>
-        <div className="grid h-11 shrink-0 grid-cols-[1fr_auto] items-center">
+        <div className="grid h-16 shrink-0 grid-cols-[1fr_auto] items-center">
           <Wordmark />
           <div className="col-start-3 flex items-center gap-2 justify-self-end">
-            <ThemeToggle />
             <IconButton
               label="Close menu"
               path={icons.close}
@@ -152,14 +168,22 @@ function Menu({ closing, onClose }: { closing: boolean; onClose: () => void }) {
           </div>
         </div>
 
-        <nav className="flex flex-1 flex-col justify-center">
-          <ul className="border-t border-hairline">
+        {/* The blob, live, at the top of the sheet; it turns to whichever
+            link is touched. */}
+        <div
+          aria-hidden
+          className={`relative min-h-0 flex-1 overflow-hidden rounded-lg ${closing ? "veil-row-out" : "veil-row"}`}
+          style={{ animationDelay: closing ? `${NAV_LINKS.length * 38}ms` : "80ms" }}
+        >
+          <HeroField view={turn === null ? undefined : LINK_VIEWS[turn]} />
+        </div>
+
+        <nav aria-label="Main" className="shrink-0 pt-6">
+          <ul>
             {NAV_LINKS.map(([label, href], i) => (
               <li
                 key={href}
-                className={`border-b border-hairline ${
-                  closing ? "veil-row-out" : "veil-row"
-                }`}
+                className={`border-t border-hairline-strong ${closing ? "veil-row-out" : "veil-row"}`}
                 style={{
                   animationDelay: closing
                     ? `${(NAV_LINKS.length - 1 - i) * 38}ms`
@@ -169,21 +193,22 @@ function Menu({ closing, onClose }: { closing: boolean; onClose: () => void }) {
                 <a
                   href={href}
                   onClick={onClose}
-                  className="group flex items-baseline justify-between gap-6 py-6 text-ink-muted transition-colors duration-(--dur-fast) hover:text-ink"
+                  onPointerEnter={() => setTurn(i)}
+                  onFocus={() => setTurn(i)}
+                  className="press group flex items-center gap-4 py-4 text-ink transition-colors duration-(--dur-fast)"
                 >
-                  <span className="font-display text-[clamp(32px,8vw,60px)] leading-none tracking-[-0.02em]">
-                    {label}
-                  </span>
+                  <span className="w-6 text-sm text-accent tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="display flex-1 text-[clamp(22px,6.4vw,40px)] leading-none">{label}</span>
                   <svg
-                    width="20"
-                    height="20"
+                    width="18"
+                    height="18"
                     viewBox="0 0 16 16"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="1.5"
                     strokeLinecap="square"
                     aria-hidden
-                    className="shrink-0 -translate-x-3 text-accent opacity-0 transition-[transform,opacity] duration-(--dur-base) ease-expressive group-hover:translate-x-0 group-hover:opacity-100"
+                    className="shrink-0 text-ink-subtle transition-[transform,color] duration-(--dur-base) ease-expressive group-hover:translate-x-1 group-hover:text-accent"
                   >
                     <path d="M3 8h9.5M8.5 4l4 4-4 4" />
                   </svg>
@@ -193,11 +218,9 @@ function Menu({ closing, onClose }: { closing: boolean; onClose: () => void }) {
           </ul>
 
           <div
-            className={`mt-10 ${closing ? "veil-row-out" : "veil-row"}`}
+            className={`flex flex-col gap-4 border-t border-hairline-strong pt-6 pb-8 ${closing ? "veil-row-out" : "veil-row"}`}
             style={{
-              animationDelay: closing
-                ? "0ms"
-                : `${160 + NAV_LINKS.length * 70}ms`,
+              animationDelay: closing ? "0ms" : `${160 + NAV_LINKS.length * 70}ms`,
             }}
           >
             {/* Waits for the menu to retract, so its scroll lock is released
@@ -205,13 +228,18 @@ function Menu({ closing, onClose }: { closing: boolean; onClose: () => void }) {
             <Button
               variant="primary"
               size="lg"
+              arrow
+              className="w-full justify-center"
               onClick={() => {
                 onClose();
                 window.setTimeout(openEarlyAccess, MENU_EXIT_MS);
               }}
             >
-              Request a demo
+              Request early access
             </Button>
+            <a href={`mailto:${contact}`} className="text-center text-sm text-ink-muted">
+              {contact}
+            </a>
           </div>
         </nav>
       </div>
@@ -227,10 +255,15 @@ export function Nav() {
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
 
-  const openMenu = useCallback(() => {
+  const showMenu = useCallback(() => {
     setClosing(false);
     setOpen(true);
   }, []);
+
+  useEffect(() => {
+    window.addEventListener(MENU_EVENT, showMenu);
+    return () => window.removeEventListener(MENU_EVENT, showMenu);
+  }, [showMenu]);
 
   // Closing plays the opening in reverse, so the menu stays mounted until the
   // retraction has finished.
@@ -249,16 +282,15 @@ export function Nav() {
   return (
     <>
       <header
-        className={`fixed inset-x-0 top-0 z-40 border-b bg-bg transition-[translate,opacity] duration-(--dur-slow) ease-expressive ${
-          onScreen && !open
+        className={`fixed inset-x-0 top-0 z-40 border-b bg-bg/90 backdrop-blur-md transition-[translate,opacity] duration-(--dur-slow) ease-expressive ${
+          onScreen
             ? "translate-y-0 border-hairline opacity-100"
             : "pointer-events-none -translate-y-full border-transparent opacity-0"
         }`}
       >
         <div
-          className={`${column} grid h-11 grid-cols-[1fr_auto_1fr] items-center`}
+          className={`${column} grid h-16 grid-cols-[1fr_auto_1fr] items-center`}
         >
-          <Crosses />
           <Wordmark className="col-start-1" />
           <nav className="col-start-2 hidden gap-6 text-sm text-ink-muted sm:flex">
             {NAV_LINKS.map(([label, href]) => (
@@ -278,20 +310,19 @@ export function Nav() {
             ))}
           </nav>
           <div className="col-start-3 flex items-center gap-2 justify-self-end">
-            <ThemeToggle />
             {/* The display lives on the wrapper, not the control: `hidden` and
                 the Button's own `inline-flex` are both plain display utilities,
                 so on one element the generated order decides, not the markup. */}
             <span className="hidden sm:inline-flex">
               <Button variant="primary" onClick={openEarlyAccess}>
-                Request a demo
+                Request early access
               </Button>
             </span>
             <span className="inline-flex sm:hidden">
               <IconButton
                 label="Open menu"
                 path={icons.menu}
-                onClick={openMenu}
+                onClick={showMenu}
               />
             </span>
           </div>
