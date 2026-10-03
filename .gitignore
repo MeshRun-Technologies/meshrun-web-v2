@@ -21,3 +21,7 @@ CLAUDE.md
 # Local design review captures.
 .impeccable/review/
 .impeccable/shot.sh
+
+# Design references and notes, kept locally.
+DESIGN.md
+.impeccable/surfaces/
