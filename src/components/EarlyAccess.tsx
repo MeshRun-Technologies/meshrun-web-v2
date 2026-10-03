@@ -1,7 +1,7 @@
 import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
 
-import { contact } from "../content";
+import { copy, localPath } from "../i18n";
 import {
   type Envelope,
   QUESTION_LABELS,
@@ -45,7 +45,10 @@ type StepId = "role" | "apps" | "setup" | "details";
 type ChoiceId = "role" | "apps" | "machine" | "hours";
 
 interface Option {
+  /** What's sent to us, in English whatever language the page is in. */
   label: string;
+  /** What the visitor sees, when it differs from the label. */
+  text?: string;
   desc?: string;
 }
 
@@ -68,41 +71,32 @@ interface Choice {
 const CHOICES: Record<ChoiceId, Choice> = {
   role: {
     kind: "single",
-    title: "Who are you?",
+    title: copy.form.role.title,
     summary: QUESTION_LABELS.role,
     cols: "sm:grid-cols-3",
-    options: [
-      { label: "Student", desc: "Studying architecture, engineering or design" },
-      { label: "Maker", desc: "Personal projects, side work or freelancing" },
-      { label: "Professional", desc: "CAD is part of my day job" },
-    ],
+    options: Object.entries(copy.form.role.options).map(([label, o]) => ({ label, text: o.label, desc: o.desc })),
   },
   apps: {
     kind: "multi",
-    title: "Which software do you need to run?",
-    hint: "Pick from the usual suspects, or search for anything else.",
+    title: copy.form.apps.title,
+    hint: copy.form.apps.hint,
     summary: QUESTION_LABELS.apps,
     cols: "grid-cols-2 sm:grid-cols-4",
     options: POPULAR.map((label) => ({ label })),
   },
   machine: {
     kind: "single",
-    title: "What do you work on today?",
+    title: copy.form.setup.machine,
     summary: QUESTION_LABELS.machine,
     cols: "sm:grid-cols-3",
     options: [{ label: "Windows" }, { label: "Mac" }, { label: "Linux" }],
   },
   hours: {
     kind: "single",
-    title: "Heavy CAD in a typical week",
+    title: copy.form.setup.hours,
     summary: QUESTION_LABELS.hours,
     cols: "sm:grid-cols-2",
-    options: [
-      { label: "Under 5 hours" },
-      { label: "5–15 hours" },
-      { label: "15–30 hours" },
-      { label: "More than 30" },
-    ],
+    options: Object.entries(copy.form.setup.hourOptions).map(([label, text]) => ({ label, text })),
   },
 };
 
@@ -185,8 +179,10 @@ function orgLabel(a: Answers) {
 }
 
 
+// The border is the edge tone, not a hairline: a box with no words of its own
+// needs an outline that can be seen (3:1, WCAG 1.4.11).
 const field =
-  "w-full rounded-full border border-hairline-strong bg-surface px-5 text-base text-ink placeholder:text-ink-subtle transition-colors duration-(--dur-fast) hover:border-edge focus:border-ink focus:outline-none";
+  "w-full rounded-full border border-edge bg-surface px-5 text-base text-ink placeholder:text-ink-subtle transition-colors duration-(--dur-fast) hover:border-ink/70 focus:border-ink focus:outline-none";
 
 const delay = (ms: number): CSSProperties => ({ animationDelay: `${ms}ms` });
 
@@ -330,7 +326,7 @@ export function EarlyAccess() {
         body.current?.querySelector<HTMLInputElement>("input[type=email]")?.focus();
       } else {
         setStatus("error");
-        setError(check.message);
+        setError(copy.form.errors.incomplete);
       }
       return;
     }
@@ -348,15 +344,14 @@ export function EarlyAccess() {
           error?: { message?: string; field?: string };
         } | null;
         if (reply?.error?.field === "email") setEmailError(true);
-        throw new Error(res.status === 429 ? reply?.error?.message : undefined);
+        throw new Error(res.status === 429 ? copy.form.errors.tooMany : undefined);
       }
       sent.current = true;
       setStatus("sent");
     } catch (e) {
       setStatus("error");
       setError(
-        (e instanceof Error && e.message) ||
-          `That didn’t go through. Try again, or write to ${contact}.`,
+        (e instanceof Error && e.message) || copy.form.errors.failed,
       );
     }
   };
@@ -379,14 +374,14 @@ export function EarlyAccess() {
     if (e.target === dialog.current) close();
   };
 
-  let action = "Continue";
-  if (step === "details") action = status === "sending" ? "Sending…" : "Send";
-  else if (step === "apps" && !answers.picks.apps?.length) action = "Skip";
+  let action = copy.form.next;
+  if (step === "details") action = status === "sending" ? copy.form.sending : copy.form.send;
+  else if (step === "apps" && !answers.picks.apps?.length) action = copy.form.skip;
 
   return (
     <dialog
       ref={dialog}
-      aria-label="Request early access"
+      aria-label={copy.form.title}
       onCancel={(e) => {
         e.preventDefault();
         close();
@@ -415,11 +410,11 @@ export function EarlyAccess() {
                 </span>
               ))}
             </div>
-            {!done && <span className="text-sm text-ink-subtle tabular-nums">{`${at + 1} of ${path.length}`}</span>}
+            {!done && <span className="text-sm text-ink-subtle tabular-nums">{copy.form.progress(at + 1, path.length)}</span>}
             <button
               type="button"
               onClick={close}
-              aria-label="Close"
+              aria-label={copy.form.close}
               className="press -mr-2 inline-flex size-10 items-center justify-center rounded-full text-ink-muted transition-colors duration-(--dur-fast) hover:bg-raised hover:text-ink"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" aria-hidden>
@@ -470,7 +465,7 @@ export function EarlyAccess() {
                 onClick={back}
                 className={`-ml-5 ${at === 0 ? "invisible" : ""}`}
               >
-                Back
+                {copy.form.back}
               </Button>
               <div className="flex items-center gap-4">
                 {status === "error" && (
@@ -515,7 +510,7 @@ function Title({ title, hint }: { title: string; hint?: string }) {
 function Setup({ answers, onPick }: { answers: Answers; onPick: (id: ChoiceId, label: string) => void }) {
   return (
     <>
-      <Title title="Your setup" hint="So we size the machines and the plans right." />
+      <Title title={copy.form.setup.title} hint={copy.form.setup.hint} />
       <div className="flex flex-col gap-9">
         {(["machine", "hours"] as const).map((id, g) => (
           <div key={id} role="radiogroup" aria-label={CHOICES[id].title} className="row-in flex flex-col gap-3" style={delay(60 + g * 80)}>
@@ -536,7 +531,7 @@ function Setup({ answers, onPick }: { answers: Answers; onPick: (id: ChoiceId, l
                         : "border-hairline-strong text-ink-muted hover:border-ink/40 hover:text-ink"
                     }`}
                   >
-                    {o.label}
+                    {o.text ?? o.label}
                   </button>
                 );
               })}
@@ -584,7 +579,7 @@ function Question({
             key={o.label}
             kind={c.kind}
             on={picks.includes(o.label)}
-            label={o.label}
+            label={o.text ?? o.label}
             desc={o.desc}
             onClick={() => onPick(o.label)}
             style={delay(60 + i * 35)}
@@ -600,8 +595,8 @@ function Question({
           <div className="overflow-hidden">
             <label className="flex flex-col gap-1.5 pt-5">
               <span className="text-sm text-ink-muted">
-                {c.otherLabel ?? "Tell us more"}
-                {c.otherOptional && <span className="text-ink-subtle"> · optional</span>}
+                {c.otherLabel ?? copy.form.tellMore}
+                {c.otherOptional && <span className="text-ink-subtle"> · {copy.form.optional}</span>}
               </span>
               <input
                 ref={otherRef}
@@ -698,7 +693,7 @@ function SoftwarePicker({
     q && !findSoftware(q) && !picks.some((p) => p.toLowerCase() === q.toLowerCase());
   const rows = [
     ...searchSoftware(q).map((s) => ({ name: s[0], meta: `${s[1]} · ${s[2]}`, custom: false })),
-    ...(custom ? [{ name: q, meta: "Add your own", custom: true }] : []),
+    ...(custom ? [{ name: q, meta: copy.form.apps.addOwn, custom: true }] : []),
   ];
   const extra = picks.filter((p) => !popular.includes(p));
 
@@ -748,7 +743,7 @@ function SoftwarePicker({
           ref={input}
           type="text"
           role="combobox"
-          aria-label="Search software"
+          aria-label={copy.form.apps.search}
           aria-expanded={!!q}
           aria-controls="software-results"
           aria-activedescendant={q && rows[active] ? `software-${active}` : undefined}
@@ -761,7 +756,7 @@ function SoftwarePicker({
             setActive(0);
           }}
           onKeyDown={onKey}
-          placeholder={`Search ${SOFTWARE.length}+ apps, or type your own`}
+          placeholder={copy.form.apps.placeholder(SOFTWARE.length)}
           className={`${field} h-12 !pl-11`}
         />
       </div>
@@ -773,7 +768,7 @@ function SoftwarePicker({
               key={p}
               type="button"
               onClick={() => onToggle(p)}
-              aria-label={`Remove ${p}`}
+              aria-label={copy.form.apps.remove(p)}
               className="pill-in group inline-flex h-7 items-center gap-1.5 rounded-sm border border-ink bg-surface pr-2 pl-2.5 text-sm text-ink transition-colors duration-(--dur-fast) hover:border-accent"
             >
               {p}
@@ -791,7 +786,7 @@ function SoftwarePicker({
             id="software-results"
             role="listbox"
             aria-multiselectable="true"
-            aria-label="Matching software"
+            aria-label={copy.form.apps.matching}
             className="flex flex-col gap-1.5"
           >
             {rows.map((r, i) => {
@@ -829,7 +824,7 @@ function SoftwarePicker({
                     </span>
                   )}
                   <span className={`min-w-0 truncate text-base text-ink ${r.custom ? "flex-1" : ""}`}>
-                    {r.custom ? <>Add &ldquo;{r.name}&rdquo;</> : r.name}
+                    {r.custom ? copy.form.apps.add(r.name) : r.name}
                   </span>
                   {!r.custom && (
                     <>
@@ -842,7 +837,7 @@ function SoftwarePicker({
             })}
           </ul>
         ) : (
-          <div role="group" aria-label="Popular software" className={`grid gap-2 ${c.cols}`}>
+          <div role="group" aria-label={copy.form.apps.popular} className={`grid gap-2 ${c.cols}`}>
             {popular.map((name, i) => (
               <Tile
                 key={name}
@@ -874,6 +869,7 @@ function Details({
   onFieldKey: (e: KeyboardEvent<HTMLInputElement>) => void;
 }) {
   const org = orgLabel(answers);
+  const emailErrorId = useId();
   return (
     <>
       {/* A trap for form-filling bots: off screen, out of the tab order, and
@@ -889,33 +885,39 @@ function Details({
         className="absolute -left-[9999px] size-px opacity-0"
       />
       <Title
-        title="Where do we reach you?"
-        hint="We’ll write when there’s a spot for you. Everything here is optional."
+        title={copy.form.details.title}
+        hint={copy.form.details.hint}
       />
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="row-in flex flex-col gap-2 sm:col-span-2" style={delay(60)}>
-          <span className="text-sm text-ink-muted">Email</span>
+          <span className="text-sm text-ink-muted">{copy.form.details.email}</span>
           <input
             type="email"
+            name="email"
             autoComplete="email"
+            spellCheck={false}
             value={answers.email}
             aria-invalid={emailError}
+            aria-describedby={emailError ? emailErrorId : undefined}
             onChange={(e) => {
               clearEmailError();
               setAnswers({ ...answers, email: e.target.value });
             }}
             onKeyDown={onFieldKey}
-            placeholder="you@example.com"
+            placeholder={copy.form.details.emailPlaceholder}
             className={`${field} h-12 aria-invalid:border-error`}
           />
           {emailError && (
-            <span className="text-sm text-error">That email doesn’t look quite right.</span>
+            <span id={emailErrorId} className="text-sm text-error">
+              {copy.form.details.emailError}
+            </span>
           )}
         </label>
         <label className="row-in flex flex-col gap-2" style={delay(95)}>
-          <span className="text-sm text-ink-muted">Name</span>
+          <span className="text-sm text-ink-muted">{copy.form.details.name}</span>
           <input
             type="text"
+            name="name"
             autoComplete="name"
             value={answers.name}
             onChange={(e) => setAnswers({ ...answers, name: e.target.value })}
@@ -927,7 +929,7 @@ function Details({
           <div className="row-in flex flex-col gap-2" style={delay(130)}>
             <OrgField
               kind={org}
-              label={org}
+              label={org === "University" ? copy.form.details.university : copy.form.details.company}
               value={answers.org}
               onChange={(value) => setAnswers({ ...answers, org: value })}
               onFieldKey={onFieldKey}
@@ -938,6 +940,14 @@ function Details({
           value={answers.comments}
           onChange={(comments) => setAnswers({ ...answers, comments })}
         />
+        <p className="row-in max-w-[60ch] text-sm text-ink-subtle sm:col-span-2" style={delay(200)}>
+          {copy.form.details.privacy[0]}
+          <a href={localPath("/privacy")} target="_blank" rel="noopener" className="link text-ink-muted underline underline-offset-2">
+            {copy.form.details.privacy[1]}
+            <span className="sr-only">{copy.form.details.newTab}</span>
+          </a>
+          {copy.form.details.privacy[2]}
+        </p>
       </div>
     </>
   );
@@ -954,19 +964,19 @@ function Note({ value, onChange }: { value: string; onChange: (value: string) =>
     <div className="row-in sm:col-span-2" style={delay(165)}>
       {open ? (
         <label className="flex flex-col gap-2">
-          <span className="text-sm text-ink-muted">Note</span>
+          <span className="text-sm text-ink-muted">{copy.form.details.note}</span>
           <textarea
             ref={box}
             rows={4}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="What would make meshrun a must-have for you?"
+            placeholder={copy.form.details.notePlaceholder}
             className={`${field} resize-none rounded-lg py-3`}
           />
         </label>
       ) : (
         <button type="button" onClick={() => setOpen(true)} className="link text-sm text-ink-muted">
-          Add a note for the team
+          {copy.form.details.addNote}
         </button>
       )}
     </div>
@@ -1030,7 +1040,6 @@ function OrgField({
   ];
   const shown = open && rows.length > 0;
   const current = Math.min(active, rows.length - 1);
-  const noun = kind === "University" ? "universities" : "companies";
 
   const choose = (name: string) => {
     onChange(name);
@@ -1082,14 +1091,14 @@ function OrgField({
           }}
           onBlur={() => setOpen(false)}
           onKeyDown={onKey}
-          placeholder={`Start typing to search ${noun}`}
+          placeholder={copy.form.details.orgPlaceholder(kind)}
           className={`${field} h-12`}
         />
         {shown && (
           <ul
             id={`${id}-list`}
             role="listbox"
-            aria-label={`Matching ${noun}`}
+            aria-label={copy.form.details.orgMatching(kind)}
             className="menu-in absolute inset-x-0 top-full z-20 mt-1.5 flex flex-col rounded-sm border border-edge bg-raised py-1"
           >
             {rows.map((r, i) => (
@@ -1112,7 +1121,7 @@ function OrgField({
                       <path d="M8 2v12M2 8h12" />
                     </svg>
                     <span className="min-w-0 flex-1 truncate text-base text-ink">
-                      Use &ldquo;{r.name}&rdquo;
+                      {copy.form.details.useTyped(r.name)}
                     </span>
                   </>
                 ) : (
@@ -1138,18 +1147,17 @@ function Done({
   email: string;
   onClose: () => void;
 }) {
-  let note = "We read every response, and this goes straight into what we build first.";
-  if (email) note = `We’ll write to ${email} when there’s a spot for you.`;
+  const note = email ? copy.form.done.withEmail(email) : copy.form.done.withoutEmail;
 
   return (
     <div className="step-in flex h-full flex-col justify-end pb-4" style={{ "--dir": 1 } as CSSProperties}>
-      <h3 className="display text-[clamp(48px,8vw,104px)] leading-[0.92]">Thank you</h3>
+      <h3 className="display text-[clamp(48px,8vw,104px)] leading-[0.92]">{copy.form.done.title}</h3>
       <p className="mt-6 max-w-[40ch] text-md text-ink-muted">
-        That’s really useful. {note}
+        {copy.form.done.lead} {note}
       </p>
       <div className="mt-10">
         <Button size="lg" onClick={onClose}>
-          Close
+          {copy.form.close}
         </Button>
       </div>
     </div>

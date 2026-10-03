@@ -37,6 +37,8 @@ export function Cursor() {
     const outline = trace?.querySelector("rect");
     if (!layer || !dot || !ring || !trace || !outline) return;
     if (!window.matchMedia("(pointer: fine)").matches) return;
+    // High contrast mode keeps the system pointer the visitor chose.
+    if (window.matchMedia("(forced-colors: active)").matches) return;
 
     const root = document.documentElement;
     root.classList.add("custom-cursor");

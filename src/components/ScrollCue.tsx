@@ -9,10 +9,17 @@ const EDGE = 8;
 /** Whatever follows the pane, so renaming or reordering sections cannot leave the cue pointing at nothing. */
 const content = () => document.getElementById("hero")?.nextElementSibling as HTMLElement | null | undefined;
 
-/** Where the page comes to rest once it has left the pane, scroll margin included. */
+/**
+ * Where the page comes to rest once it has left the pane: the next section's
+ * top, less the page's scroll padding and the section's own margin. The
+ * hand-off scrolls to exactly this point and tests against it, so the two can
+ * never disagree (scrollIntoView would add the padding on its own and stop
+ * short, and every tick would then hand off again).
+ */
 function landing(el: HTMLElement) {
+  const padding = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
   const margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0;
-  return el.getBoundingClientRect().top + window.scrollY - margin;
+  return el.getBoundingClientRect().top + window.scrollY - padding - margin;
 }
 
 const behavior = (): ScrollBehavior =>
@@ -28,7 +35,8 @@ export function useHeroHandoff() {
   const moving = useRef(false);
 
   const toContent = useCallback(() => {
-    content()?.scrollIntoView({ behavior: behavior() });
+    const next = content();
+    if (next) window.scrollTo({ top: landing(next), behavior: behavior() });
   }, []);
 
   useEffect(() => {

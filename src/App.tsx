@@ -1,15 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 import { Button, LinkButton } from "./components/Button";
 import { Cursor } from "./components/Cursor";
 import { EarlyAccess, openEarlyAccess } from "./components/EarlyAccess";
 import { HeroField } from "./components/HeroField";
+import { LangSwitch } from "./components/LangSwitch";
 import { column } from "./components/layout";
+import { MotionToggle } from "./components/MotionToggle";
 import { Nav, NavSentinel, openMenu } from "./components/Nav";
+import { SkipLink } from "./components/SkipLink";
 import { useHeroHandoff } from "./components/ScrollCue";
 import { Wordmark } from "./components/Wordmark";
-import { contact, footer, pillars, steps, targets, targetsNote, trades, yours } from "./content";
+import { copy, localPath } from "./i18n";
 import { useReveal } from "./lib/useReveal";
 
 const delay = (ms: number): CSSProperties => ({ animationDelay: `${ms}ms` });
@@ -19,6 +22,7 @@ const stagger = (i: number): CSSProperties =>
   ({ "--stagger": `${Math.min(i, 6) * 80}ms` }) as CSSProperties;
 
 // Display type set one word per span, so each word can carry its own delay.
+// Screen readers get the line whole: split up, some read it a word at a time.
 function Words({
   text,
   className,
@@ -28,13 +32,20 @@ function Words({
   className: string;
   style: (i: number) => CSSProperties;
 }) {
-  return text.split(" ").map((w, i) => (
-    <span key={i}>
-      <span className={className} style={style(i)}>
-        {w}
-      </span>{" "}
-    </span>
-  ));
+  return (
+    <>
+      <span className="sr-only">{text}</span>
+      <span aria-hidden>
+        {text.split(" ").map((w, i) => (
+          <span key={i}>
+            <span className={className} style={style(i)}>
+              {w}
+            </span>{" "}
+          </span>
+        ))}
+      </span>
+    </>
+  );
 }
 
 /** The blob's four tones, in an order where no two neighbours match. */
@@ -65,8 +76,9 @@ export function App() {
   useGlow();
   return (
     <>
+      <SkipLink />
       <Nav />
-      <main>
+      <main id="main" tabIndex={-1} className="outline-none">
         <Hero />
         <Targets />
         <Pillars />
@@ -100,7 +112,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section id={id} className={`scroll-mt-16 ${alt ? "bg-surface" : "bg-bg"}`}>
+    <section id={id} className={alt ? "bg-surface" : "bg-bg"}>
       <div className={`${column} ${className}`}>{children}</div>
     </section>
   );
@@ -126,8 +138,6 @@ function Heading({ title, sub, className = "" }: { title: string; sub?: string; 
 // The landing: the live render, the whole object, centred in a black pane
 // with the promise set across it. The line and the action sit at the foot,
 // to the left.
-const HOOK = "CAD without the tower";
-
 function Hero() {
   useHeroHandoff();
   return (
@@ -136,20 +146,17 @@ function Hero() {
       <div aria-hidden className="hero-veil" />
       <NavSentinel />
 
-      <header className={`${column} absolute inset-x-0 top-0 z-10 grid h-16 grid-cols-[1fr_auto] items-center sm:h-20 sm:grid-cols-[1fr_auto_1fr]`}>
+      {/* Only the mark and the menu here; the full bar takes over once the
+          landing has been scrolled past. The same 64px as that bar and the
+          menu's own, so the mark doesn't move when the menu opens over it. */}
+      <header className={`${column} absolute inset-x-0 top-0 z-10 flex h-16 items-center justify-between`}>
         <Wordmark />
-        <nav aria-label="Main" className="hidden gap-8 text-sm text-ink-muted sm:flex">
-          <a href="#platform" className="link">Platform</a>
-          <a href="#session" className="link">How it works</a>
-          <a href="#pricing" className="link">Pricing</a>
-        </nav>
-        <span className="flex items-center gap-1 justify-self-end">
-          <Button onClick={openEarlyAccess}>Request early access</Button>
+        <span className="flex items-center">
           <button
             type="button"
             onClick={openMenu}
-            aria-label="Open menu"
-            className="press -mr-2 inline-flex size-10 items-center justify-center rounded-full text-ink-muted hover:text-ink sm:hidden"
+            aria-label={copy.nav.openMenu}
+            className="press -mr-2 inline-flex size-10 items-center justify-center rounded-full text-ink-muted hover:text-ink"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" aria-hidden>
               <path d="M2 5h12M2 11h12" />
@@ -160,43 +167,76 @@ function Hero() {
 
       {/* Set on the sphere's centre, which is the pane's. */}
       <h1 className="display absolute inset-x-0 top-1/2 z-10 mx-auto max-w-[11ch] -translate-y-1/2 px-5 text-center text-[clamp(40px,7.4vw,104px)] leading-[0.98] text-balance">
-        <Words text={HOOK} className="blur-in" style={(i) => delay(160 + i * 80)} />
+        <Words text={copy.hero.hook} className="blur-in" style={(i) => delay(160 + i * 80)} />
       </h1>
 
       <div className={`${column} absolute inset-x-0 bottom-0 z-10 flex flex-col gap-6 pb-10 sm:flex-row sm:items-center sm:gap-10 sm:pb-12`}>
         <p className="row-in max-w-[30ch] text-[clamp(16px,1.5vw,19px)] text-ink-muted" style={delay(620)}>
-          Windows-only CAD, on the Mac you already own.
+          {copy.hero.line}
         </p>
-        <span className="row-in" style={delay(720)}>
-          <Button variant="primary" size="lg" arrow onClick={openEarlyAccess}>
-            Request early access
-          </Button>
-        </span>
+        <div className="flex items-center justify-between gap-4 sm:contents">
+          <span className="row-in" style={delay(720)}>
+            <Button variant="primary" size="lg" arrow onClick={openEarlyAccess}>
+              {copy.nav.cta}
+            </Button>
+          </span>
+          <span className="row-in sm:ml-auto" style={delay(820)}>
+            <MotionToggle />
+          </span>
+        </div>
       </div>
     </section>
   );
 }
 
+/**
+ * How big the figures can be: the widest one, in its own letters, has to fit
+ * its column with a little to spare. Measured once the fonts are in, so it
+ * holds whatever the figures say and in whichever language ("RTX 4000" in
+ * English, "Branchez" in French); all four share the one size. Written as the
+ * share of the column (cqi) the type's em may take.
+ */
+function useFigureFit() {
+  const list = useRef<HTMLUListElement>(null);
+  useLayoutEffect(() => {
+    const ul = list.current;
+    if (!ul) return;
+    const fit = () => {
+      let widest = 0;
+      for (const figure of ul.querySelectorAll<HTMLElement>("[data-figure]")) {
+        const size = parseFloat(getComputedStyle(figure).fontSize);
+        if (size) widest = Math.max(widest, figure.scrollWidth / size);
+      }
+      if (widest) ul.style.setProperty("--fit", `${(95 / widest).toFixed(2)}cqi`);
+    };
+    fit();
+    void document.fonts.ready.then(fit);
+  }, []);
+  return list;
+}
+
 // The measured claims, as four wide figures. Under the cursor a figure fills
 // with its own slice of the blob; the others step back.
 function Targets() {
+  const list = useFigureFit();
   return (
     <Section id="platform" className={`${band} text-center`}>
       <Heading
         className="mx-auto items-center"
-        title="CAD in the cloud"
-        sub="meshrun streams full Windows CAD from powerful cloud PCs straight to your screen."
+        title={copy.platform.title}
+        sub={copy.platform.sub}
       />
-      <ul className="figures mt-16 grid grid-cols-2 gap-x-6 gap-y-14 sm:mt-24 lg:grid-cols-4">
-        {targets.map((t, i) => (
+      <ul ref={list} className="figures mt-16 grid grid-cols-2 gap-x-6 gap-y-14 sm:mt-24 lg:grid-cols-4">
+        {copy.targets.map((t, i) => (
           <li
             key={t.figure}
             data-glow
             data-tone={TONES[i % TONES.length]}
             style={stagger(i)}
-            className="reveal flex flex-col items-center gap-3 py-4"
+            className="reveal @container flex flex-col items-center gap-3 py-4"
           >
-            <span className="display relative text-[clamp(32px,4vw,56px)] leading-none whitespace-nowrap">
+            {/* Sized by the column, not the screen: see useFigureFit. */}
+            <span data-figure className="display relative text-[clamp(18px,var(--fit,15cqi),56px)] leading-none whitespace-nowrap">
               {t.figure}
               <span aria-hidden className="figure-glow">
                 {t.figure}
@@ -206,7 +246,7 @@ function Targets() {
           </li>
         ))}
       </ul>
-      <p className="reveal mt-16 text-sm text-ink-subtle">{targetsNote}</p>
+      <p className="reveal mt-16 text-sm text-ink-subtle">{copy.targetsNote}</p>
     </Section>
   );
 }
@@ -232,7 +272,7 @@ function Pillars() {
   const [hovered, setHovered] = useState<number | null>(null);
   return (
     <Section id="experience" alt className={band}>
-      <Heading title="What we deliver" sub="Not a clunky band-aid solution. Just your apps running cleanly on Mac." />
+      <Heading title={copy.experience.title} sub={copy.experience.sub} />
       <div className="tiles mt-14 grid gap-3 sm:mt-20 lg:grid-cols-[1fr_1.25fr_1fr] lg:grid-rows-2">
         <div
           aria-hidden
@@ -240,7 +280,7 @@ function Pillars() {
         >
           <HeroField view={hovered === null ? undefined : TONE_VIEWS[hovered % TONE_VIEWS.length]} />
         </div>
-        {pillars.map((p, i) => (
+        {copy.pillars.map((p, i) => (
           <article
             key={p.title}
             data-tile
@@ -249,7 +289,7 @@ function Pillars() {
             style={stagger(i)}
             onPointerEnter={() => setHovered(i)}
             onPointerLeave={() => setHovered(null)}
-            className={`reveal flex min-h-60 flex-col justify-end gap-3 rounded-lg border border-hairline-strong bg-bg p-8 ${PLACE[i]}`}
+            className={`reveal flex min-h-44 flex-col justify-end gap-3 rounded-lg border border-hairline-strong bg-bg p-8 sm:min-h-60 ${PLACE[i]}`}
           >
             <h3 className="text-xl font-medium tracking-[-0.02em]">{p.title}</h3>
             <p className="muted text-base text-ink-muted">{p.body}</p>
@@ -290,24 +330,24 @@ function Cost() {
     touched.current = true;
     setRent(value);
   };
-  const rows = trades.map((t) => (rent ? t.gain : t.cost));
+  const rows = copy.trades.map((t) => (rent ? t.gain : t.cost));
   const options: [string, boolean][] = [
-    ["Own a workstation", false],
-    ["Rent with meshrun", true],
+    [copy.cost.own, false],
+    [copy.cost.rent, true],
   ];
 
   return (
     <Section id="how" className={band}>
       <Heading
-        title="Rent the power, not the box"
-        sub="You don’t need to own a workstation. You need power for a few hours a week."
+        title={copy.cost.title}
+        sub={copy.cost.sub}
       />
       <div
         ref={panel}
         data-rent={rent}
         className="cost-panel reveal mt-14 rounded-lg border border-hairline-strong bg-surface p-6 sm:mt-20 sm:p-10"
       >
-        <div role="group" aria-label="Compare" className="relative grid grid-cols-2 rounded-full bg-bg/70 p-1.5">
+        <div role="group" aria-label={copy.cost.compare} className="relative grid grid-cols-2 rounded-full bg-bg/70 p-1.5">
           <span
             aria-hidden
             className="absolute inset-y-1.5 left-1.5 w-[calc(50%-6px)] rounded-full bg-ink transition-transform duration-700 ease-expressive"
@@ -327,7 +367,7 @@ function Cost() {
             </button>
           ))}
         </div>
-        <ul key={String(rent)} aria-live="polite" className="mt-10 grid gap-x-12 sm:mt-12 lg:grid-cols-2">
+        <ul key={String(rent)} className="mt-10 grid gap-x-12 sm:mt-12 lg:grid-cols-2">
           {rows.map((row, i) => (
             <li
               key={row}
@@ -351,12 +391,14 @@ function Cost() {
 // The machine's states, as the app shows them, keyed to the steps of a session:
 // where the camera sits on the live blob for each, closing in and coming
 // round as the session moves on.
-const MACHINE = [
-  { state: "asleep", label: "Asleep", detail: "Not using hours", view: { azimuth: 270, polar: 180, zoom: 0.78 } },
-  { state: "picked", label: "Revit", detail: "~/Projects/tower-B", view: { azimuth: 225, polar: 162, zoom: 1.0 } },
-  { state: "booting", label: "Waking up", detail: "Mounting your folder", view: { azimuth: 320, polar: 142, zoom: 1.35 } },
-  { state: "live", label: "Live", detail: "Hours stop when you close it", view: { azimuth: 380, polar: 124, zoom: 1.85 } },
-] as const;
+const MACHINE = (
+  [
+    { state: "asleep", view: { azimuth: 270, polar: 180, zoom: 0.78 } },
+    { state: "picked", view: { azimuth: 225, polar: 162, zoom: 1.0 } },
+    { state: "booting", view: { azimuth: 320, polar: 142, zoom: 1.35 } },
+    { state: "live", view: { azimuth: 380, polar: 124, zoom: 1.85 } },
+  ] as const
+).map((m, i) => ({ ...m, ...copy.session.machine[i] }));
 
 /** How far apart the steps sit in the scroll, as a share of the screen. */
 const STEP_SPAN = 0.5;
@@ -441,16 +483,13 @@ function Session() {
   }, []);
 
   const machine = MACHINE[active];
-  const step = steps[active];
+  const step = copy.steps[active];
 
   return (
-    <section id="session" className="scroll-mt-16 bg-surface">
+    <section id="session" className="bg-surface">
       {/* Phones: the steps as a list, each with the state it puts the machine in. */}
       <div className={`${column} py-24 sm:py-32 lg:hidden`}>
-        <Heading
-          title="From Dock to design"
-          sub="Everything from opening the app to getting to work takes as little as 45 seconds."
-        />
+        <Heading title={copy.session.title} sub={copy.session.sub} />
         {/* The machine rides along at the top, coming round and closing in. */}
         <div className="sticky top-20 z-10 mt-10 flex justify-end">
           <div data-state={MACHINE[mobileActive].state} className="machine relative grid size-28 place-items-center">
@@ -460,13 +499,13 @@ function Session() {
           </div>
         </div>
         <ol ref={mobileList} className="-mt-28">
-          {steps.map((s, i) => (
-            <li key={s.step} className="flex flex-col gap-4 border-t border-hairline-strong py-10 pr-32">
-              <span className="text-sm text-accent">{s.step.replace("Step ", "")}</span>
-              <h3 className="display text-[clamp(26px,6vw,36px)] leading-[1.02]">{s.title}</h3>
+          {copy.steps.map((s, i) => (
+            <li key={s.number} className="flex flex-col gap-4 border-t border-hairline-strong py-10 pr-32">
+              <span className="text-sm text-accent">{s.number}</span>
+              <h3 className="display text-[clamp(20px,6.4vw,36px)] leading-[1.02]">{s.title}</h3>
               <p className="max-w-[38ch] text-md text-ink-muted">{s.body}</p>
               <span className="mt-1 inline-flex w-fit items-center gap-2.5 rounded-full border border-ink/15 px-4 py-2 text-sm text-ink">
-                {MACHINE[i].label}
+                <span className="whitespace-nowrap">{MACHINE[i].label}</span>
                 <span className="text-ink-subtle">{MACHINE[i].detail}</span>
               </span>
             </li>
@@ -493,13 +532,21 @@ function Session() {
           ))}
         </div>
 
+        {/* The pane shows one step at a time, and only as the wheel moves it;
+            screen readers get all four at once. */}
+        <ol className="sr-only">
+          {copy.steps.map((s) => (
+            <li key={s.number}>
+              <h3>{s.title}</h3>
+              <p>{s.body}</p>
+            </li>
+          ))}
+        </ol>
+
         <div className="sticky top-0 h-svh">
           <div className={`${column} grid h-full grid-cols-[1fr_1fr] items-center gap-20 pt-16`}>
             <div className="flex flex-col gap-14">
-              <Heading
-                title="From Dock to design"
-                sub="Everything from opening the app to getting to work takes as little as 45 seconds."
-              />
+              <Heading title={copy.session.title} sub={copy.session.sub} />
               <div className="flex flex-col gap-6">
                 <div aria-hidden className="flex gap-2">
                   {MACHINE.map((m, i) => (
@@ -509,8 +556,10 @@ function Session() {
                     />
                   ))}
                 </div>
-                <div key={active} className="step-in flex min-h-52 flex-col gap-4" style={{ "--dir": 1 } as CSSProperties}>
-                  <span className="text-sm text-accent">{step.step.replace("Step ", "")} of 04</span>
+                <div key={active} aria-hidden className="step-in flex min-h-52 flex-col gap-4" style={{ "--dir": 1 } as CSSProperties}>
+                  <span className="text-sm text-accent">
+                    {step.number} {copy.session.of} {copy.steps[copy.steps.length - 1].number}
+                  </span>
                   <h3 className="display text-[clamp(30px,3.2vw,46px)] leading-[1.02]">{step.title}</h3>
                   <p className="max-w-[40ch] text-md text-ink-muted">{step.body}</p>
                 </div>
@@ -523,7 +572,7 @@ function Session() {
                   <HeroField view={machine.view} />
                 </div>
               </div>
-              <div role="status" className="flex items-center gap-3 rounded-full border border-ink/15 bg-bg/60 px-5 py-2.5 text-[15px]">
+              <div aria-hidden className="flex items-center gap-3 rounded-full border border-ink/15 bg-bg/60 px-5 py-2.5 text-[15px]">
                 <span className={`size-2 rounded-full ${machine.state === "live" ? "bg-accent" : "border border-ink/40"}`} />
                 <span className="text-ink">{machine.label}</span>
                 <span className="text-ink-subtle">{machine.detail}</span>
@@ -540,19 +589,16 @@ function Session() {
 function Yours() {
   return (
     <Section id="privacy" className={band}>
-      <Heading
-        title="Your files and licence stay yours"
-        sub="Renting compute shouldn’t mean giving up control of your files or buying software twice."
-      />
+      <Heading title={copy.yoursSection.title} sub={copy.yoursSection.sub} />
       <ul className="tiles mt-14 grid gap-3 sm:mt-20 lg:grid-cols-3">
-        {yours.map((y, i) => (
+        {copy.yours.map((y, i) => (
           <li
             key={y.title}
             data-tile
             data-glow
             data-tone={(["ember", "ocean", "dune"] as const)[i % 3]}
             style={stagger(i)}
-            className="reveal flex min-h-60 flex-col gap-3 rounded-lg border border-hairline-strong bg-surface p-8 pt-24"
+            className="reveal flex flex-col gap-3 rounded-lg border border-hairline-strong bg-surface p-8 pt-16 sm:min-h-60 sm:pt-24"
           >
             <h3 className="text-xl font-medium tracking-[-0.02em]">{y.title}</h3>
             <p className="muted text-base text-ink-muted">{y.body}</p>
@@ -568,19 +614,14 @@ function Pricing() {
   return (
     <Section id="pricing" alt className={band}>
       <div className="grid gap-14 lg:grid-cols-[1fr_1.35fr] lg:items-end lg:gap-20">
-        <Heading
-          title="Pay for what you need"
-          sub="Plans sized to how you actually work, so you never pay for hours you don’t use. Licences come from your software provider, not us."
-        />
+        <Heading title={copy.pricing.title} sub={copy.pricing.sub} />
         <div className="reveal flex flex-col gap-6 rounded-lg border border-hairline-strong bg-bg p-9 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col gap-3">
-            <p className="display text-[clamp(22px,2.4vw,32px)] leading-tight">Pricing coming soon</p>
-            <p className="max-w-[36ch] text-base text-ink-muted">
-              We’re still in development, and will post plans when they’re ready.
-            </p>
+            <p className="display text-[clamp(22px,2.4vw,32px)] leading-tight">{copy.pricing.soon}</p>
+            <p className="max-w-[36ch] text-base text-ink-muted">{copy.pricing.note}</p>
           </div>
-          <Button variant="primary" size="lg" onClick={openEarlyAccess}>
-            Request early access
+          <Button variant="primary" size="lg" onClick={openEarlyAccess} className="self-start sm:self-auto">
+            {copy.nav.cta}
           </Button>
         </div>
       </div>
@@ -590,23 +631,20 @@ function Pricing() {
 
 function Closing() {
   return (
-    <section className="relative flex min-h-[900px] items-center justify-center overflow-hidden bg-bg py-24 text-center">
+    <section className="relative flex min-h-[760px] items-center sm:min-h-[900px] justify-center overflow-hidden bg-bg py-24 text-center">
       <HeroField view={{ azimuth: 300, polar: 160, zoom: 1.45 }} />
       <div aria-hidden className="closing-veil absolute inset-0" />
       <div className={`${column} reveal relative flex flex-col items-center gap-6`}>
         <h2 className="display max-w-[12ch] text-[clamp(40px,6.6vw,96px)] leading-[0.96] text-balance">
-          Leave the tower behind
+          {copy.closing.title}
         </h2>
-        <p className="max-w-[38ch] text-md text-ink-muted">
-          Carry the laptop you love. Run the software it can’t. meshrun isn’t available yet; tell us how you work and
-          we’ll be in touch.
-        </p>
+        <p className="max-w-[38ch] text-md text-ink-muted">{copy.closing.body}</p>
         <div className="pair mt-2 flex flex-wrap justify-center gap-3">
           <Button variant="primary" size="lg" onClick={openEarlyAccess}>
-            Request early access
+            {copy.nav.cta}
           </Button>
-          <LinkButton href={`mailto:${contact}`} size="lg">
-            {contact}
+          <LinkButton href={`mailto:${copy.contact}`} size="lg">
+            {copy.contact}
           </LinkButton>
         </div>
       </div>
@@ -615,44 +653,50 @@ function Closing() {
 }
 
 const FOOTER_LINKS = [
-  ["Product", [["Platform", "#platform"], ["What we deliver", "#experience"], ["How it works", "#session"], ["Pricing", "#pricing"]]],
-  ["Company", [["Privacy", "#privacy"], ["Contact", `mailto:${contact}`], ["Early access", "#"]]],
+  [copy.footer.product, copy.footer.productLinks],
+  [copy.footer.legal, copy.legalLinks.map(([label, path]) => [label, localPath(path)])],
 ] as const;
 
 function Footer() {
   return (
     <footer className="bg-surface">
       <div className={`${column} flex flex-col gap-14 pt-20 pb-10`}>
-        <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr]">
-          <div className="flex flex-col gap-5">
+        <div className="grid gap-12 sm:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div className="flex flex-col gap-5 sm:col-span-3 lg:col-span-1">
             <Wordmark />
-            <p className="max-w-[40ch] text-base text-ink-muted">{footer.blurb}</p>
+            <p className="max-w-[40ch] text-base text-ink-muted">{copy.footer.blurb}</p>
           </div>
           {FOOTER_LINKS.map(([heading, links]) => (
             <nav key={heading} aria-label={heading} className="flex flex-col gap-3 text-sm">
               <span className="font-medium text-ink">{heading}</span>
               {links.map(([label, href]) => (
-                <a
-                  key={label}
-                  href={href}
-                  onClick={label === "Early access" ? (e) => (e.preventDefault(), openEarlyAccess()) : undefined}
-                  className="link w-fit text-ink-muted"
-                >
+                <a key={label} href={href} className="link w-fit py-0.5 text-ink-muted">
                   {label}
                 </a>
               ))}
             </nav>
           ))}
+          <div className="flex flex-col gap-3 text-sm">
+            <span className="font-medium text-ink">{copy.footer.company}</span>
+            <a href={`mailto:${copy.contact}`} className="link w-fit py-0.5 text-ink-muted">
+              {copy.contact}
+            </a>
+            <button type="button" onClick={openEarlyAccess} className="link w-fit py-0.5 text-left text-ink-muted">
+              {copy.footer.earlyAccess}
+            </button>
+            <MotionToggle look="text" className="py-0.5" />
+          </div>
         </div>
         <div className="flex flex-col gap-3 border-t border-hairline-strong pt-8 text-xs text-ink-subtle">
-          {footer.notices.map((notice) => (
+          {copy.footer.notices.map((notice) => (
             <p key={notice.slice(0, 24)} className="max-w-5xl">
               {notice}
             </p>
           ))}
-          <p className="mt-2">
-            {footer.entity} {footer.copyright}
-          </p>
+          <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <p>{copy.footer.copyright}</p>
+            <LangSwitch className="-ml-1.5 sm:ml-0 sm:-mr-1.5" />
+          </div>
         </div>
       </div>
     </footer>

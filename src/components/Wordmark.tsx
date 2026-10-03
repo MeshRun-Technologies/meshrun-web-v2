@@ -36,9 +36,9 @@ export function Mark({ size = 22, className = "" }: { size?: number; className?:
 
 // The brand: the mark beside the lowercase wordmark in the display face, in
 // lower case where everything else in that face is capitals. Never bolded.
-export function Wordmark({ className = "" }: { className?: string }) {
+export function Wordmark({ className = "", href = "#" }: { className?: string; href?: string }) {
   return (
-    <a href="#" className={`inline-flex items-center gap-2.5 text-ink ${className}`} aria-label="meshrun">
+    <a href={href} className={`inline-flex items-center gap-2.5 text-ink ${className}`} aria-label="meshrun">
       <Mark size={22} />
       <span className="font-display text-[17px] tracking-[-0.03em]">meshrun</span>
     </a>

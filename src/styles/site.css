@@ -88,6 +88,10 @@
   html {
     /* Native smooth anchor scrolling. */
     scroll-behavior: smooth;
+    /* Whatever takes focus or is linked to lands clear of the fixed bar
+       (WCAG 2.4.11). The one offset for the page: sections carry no scroll
+       margin of their own, and the landing's hand-off reads this. */
+    scroll-padding-top: 4rem;
     /* No visible scrollbar: the rails are the only vertical lines on the page.
        Wheel, trackpad and keys still scroll. */
     scrollbar-width: none;
@@ -1015,6 +1019,18 @@
   }
 }
 
+/* High contrast mode keeps the system's own pointer, which the visitor may
+   have made larger or recoloured on purpose. */
+@media (forced-colors: active) {
+  .custom-cursor,
+  .custom-cursor * {
+    cursor: auto !important;
+  }
+  .cursor-layer {
+    display: none;
+  }
+}
+
 /* ---------------------------------------------------------------------------
    The landing's stage: the page's black, with the render filling it. The
    canvas stays transparent until its first frame is drawn, then comes up out
@@ -1055,14 +1071,27 @@
       linear-gradient(to top, rgb(5 5 5 / 0.9) 0%, transparent 30%);
   }
 }
+/* Deep enough under the headline, the line and the buttons that the type
+   holds its contrast whichever part of the render turns behind it (4.5:1 for
+   the line, WCAG 1.4.3). */
 .closing-veil {
   pointer-events: none;
   background: radial-gradient(
-    ellipse 40% 26% at 50% 50%,
-    rgb(5 5 5 / 0.55) 0%,
-    rgb(5 5 5 / 0.3) 55%,
+    ellipse 46% 36% at 50% 52%,
+    rgb(5 5 5 / 0.82) 0%,
+    rgb(5 5 5 / 0.66) 50%,
     transparent 100%
   );
+}
+@media (max-width: 640px) {
+  .closing-veil {
+    background: radial-gradient(
+      ellipse 95% 34% at 50% 52%,
+      rgb(5 5 5 / 0.86) 0%,
+      rgb(5 5 5 / 0.7) 55%,
+      transparent 100%
+    );
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1412,5 +1441,105 @@
   .ticker,
   .bob {
     animation: none !important;
+  }
+}
+
+/* The page's own pause switch holds the CSS loops too, not only the render. */
+[data-motion-paused] .ticker,
+[data-motion-paused] .bob {
+  animation-play-state: paused !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Legal pages: the page's type, set for reading. Headings in the body face,
+   not the display one, so a long document stays calm.
+   --------------------------------------------------------------------------- */
+.legal {
+  color: var(--color-ink-muted);
+  font-size: var(--text-md);
+  line-height: 1.65;
+
+  & section + section {
+    margin-top: 3.5rem;
+    padding-top: 3.5rem;
+    border-top: 1px solid var(--color-hairline-strong);
+  }
+  & h2 {
+    color: var(--color-ink);
+    font-size: clamp(22px, 2.4vw, 28px);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+  & h3 {
+    margin-top: 2rem;
+    color: var(--color-ink);
+    font-size: var(--text-base);
+    font-weight: 500;
+  }
+  & h2 + *,
+  & h3 + * {
+    margin-top: 1rem;
+  }
+  & p + p,
+  & p + ul,
+  & ul + p,
+  & p + .table,
+  & .table + p {
+    margin-top: 1rem;
+  }
+  & ul {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+  & li::marker {
+    color: var(--color-ink-subtle);
+  }
+  & strong {
+    color: var(--color-ink);
+    font-weight: 500;
+  }
+  & a {
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-decoration-color: var(--color-edge);
+    text-underline-offset: 3px;
+    transition: text-decoration-color var(--dur-fast);
+    overflow-wrap: anywhere;
+  }
+  & a:hover {
+    text-decoration-color: var(--color-ink);
+  }
+  & code {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.9em;
+    color: var(--color-ink);
+  }
+  & .table {
+    overflow-x: auto;
+    border: 1px solid var(--color-hairline-strong);
+    border-radius: var(--radius-md, 12px);
+  }
+  & table {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+    line-height: 1.5;
+  }
+  & th,
+  & td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  & th {
+    color: var(--color-ink);
+    font-weight: 500;
+    border-bottom: 1px solid var(--color-hairline-strong);
   }
 }

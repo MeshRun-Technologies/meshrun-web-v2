@@ -1,19 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { bloop } from "../lib/bloop";
 import { Button } from "./Button";
 import { HeroField } from "./HeroField";
 import { openEarlyAccess } from "./EarlyAccess";
-import { contact } from "../content";
+import { copy } from "../i18n";
+import { LangSwitch } from "./LangSwitch";
 import { column } from "./layout";
 import { Wordmark } from "./Wordmark";
 
-const NAV_LINKS = [
-  ["Platform", "#platform"],
-  ["How it Works", "#how"],
-  ["Privacy & Compliance", "#privacy"],
-  ["Pricing", "#pricing"],
-] as const;
+const NAV_LINKS = copy.nav.links;
 
 const MENU_EVENT = "meshrun:menu";
 
@@ -139,20 +135,44 @@ function useScrollLock() {
 function Menu({ closing, onClose }: { closing: boolean; onClose: () => void }) {
   useScrollLock();
   const [turn, setTurn] = useState<number | null>(null);
+  const sheet = useRef<HTMLDivElement>(null);
 
+  // A modal sheet: focus starts inside it, Tab goes round inside it, and on
+  // closing it goes back to whatever opened it.
   useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    const focusable = () =>
+      [...(sheet.current?.querySelectorAll<HTMLElement>("a[href], button:not(:disabled)") ?? [])];
+    sheet.current?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
+
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      opener?.focus?.({ preventScroll: true });
+    };
   }, [onClose]);
 
   return (
     <div
+      ref={sheet}
       role="dialog"
       aria-modal="true"
-      aria-label="Menu"
+      aria-label={copy.nav.menu}
       className={`fixed inset-0 z-50 bg-bg ${
         closing ? "veil-out pointer-events-none" : "veil"
       }`}
@@ -160,14 +180,15 @@ function Menu({ closing, onClose }: { closing: boolean; onClose: () => void }) {
       <div className={`${column} flex h-full flex-col`}>
         <div className="grid h-16 shrink-0 grid-cols-[1fr_auto] items-center">
           <Wordmark />
-          <div className="col-start-3 flex items-center gap-2 justify-self-end">
-            <IconButton
-              label="Close menu"
-              path={icons.close}
-              onClick={onClose}
-            />
+          <div className="col-start-3 flex items-center gap-4 justify-self-end">
+            <LangSwitch />
+            <IconButton label={copy.nav.closeMenu} path={icons.close} onClick={onClose} />
           </div>
         </div>
+
+        {/* Stacked on a phone; on a wide screen, opened from the landing's
+            menu button, the blob and the links sit side by side. */}
+        <div className="flex min-h-0 flex-1 flex-col lg:grid lg:grid-cols-2 lg:items-center lg:gap-16">
 
         {/* The blob, live, at the top of the sheet; it turns to whichever
             link is touched, and a tap on it plays its note (touch only: the
@@ -177,13 +198,13 @@ function Menu({ closing, onClose }: { closing: boolean; onClose: () => void }) {
           onPointerUp={(event) => {
             if (event.pointerType === "touch" && !closing) bloop();
           }}
-          className={`relative min-h-0 flex-1 overflow-hidden rounded-lg ${closing ? "veil-row-out" : "veil-row"}`}
+          className={`relative min-h-0 flex-1 overflow-hidden rounded-lg lg:h-[min(72svh,640px)] lg:flex-none ${closing ? "veil-row-out" : "veil-row"}`}
           style={{ animationDelay: closing ? `${NAV_LINKS.length * 38}ms` : "80ms" }}
         >
           <HeroField view={turn === null ? undefined : LINK_VIEWS[turn]} />
         </div>
 
-        <nav aria-label="Main" className="shrink-0 pt-6">
+        <nav aria-label={copy.nav.main} className="shrink-0 pt-6 lg:pt-0">
           <ul>
             {NAV_LINKS.map(([label, href], i) => (
               <li
@@ -203,7 +224,7 @@ function Menu({ closing, onClose }: { closing: boolean; onClose: () => void }) {
                   className="press group flex items-center gap-4 py-4 text-ink transition-colors duration-(--dur-fast)"
                 >
                   <span className="w-6 text-sm text-accent tabular-nums">{String(i + 1).padStart(2, "0")}</span>
-                  <span className="display flex-1 text-[clamp(22px,6.4vw,40px)] leading-none">{label}</span>
+                  <span className="display min-w-0 flex-1 text-[clamp(18px,5.6vw,40px)] leading-[1.05] lg:text-[clamp(22px,2.8vw,40px)]">{label}</span>
                   <svg
                     width="18"
                     height="18"
@@ -240,13 +261,14 @@ function Menu({ closing, onClose }: { closing: boolean; onClose: () => void }) {
                 window.setTimeout(openEarlyAccess, MENU_EXIT_MS);
               }}
             >
-              Request early access
+              {copy.nav.cta}
             </Button>
-            <a href={`mailto:${contact}`} className="text-center text-sm text-ink-muted">
-              {contact}
+            <a href={`mailto:${copy.contact}`} className="text-center text-sm text-ink-muted">
+              {copy.contact}
             </a>
           </div>
         </nav>
+        </div>
       </div>
     </div>
   );
@@ -287,6 +309,7 @@ export function Nav() {
   return (
     <>
       <header
+        inert={!onScreen}
         className={`fixed inset-x-0 top-0 z-40 border-b bg-bg/90 backdrop-blur-md transition-[translate,opacity] duration-(--dur-slow) ease-expressive ${
           onScreen
             ? "translate-y-0 border-hairline opacity-100"
@@ -297,7 +320,7 @@ export function Nav() {
           className={`${column} grid h-16 grid-cols-[1fr_auto_1fr] items-center`}
         >
           <Wordmark className="col-start-1" />
-          <nav className="col-start-2 hidden gap-6 text-sm text-ink-muted sm:flex">
+          <nav aria-label={copy.nav.main} className="col-start-2 hidden gap-6 text-sm whitespace-nowrap text-ink-muted lg:flex">
             {NAV_LINKS.map(([label, href]) => (
               <a
                 key={href}
@@ -318,17 +341,14 @@ export function Nav() {
             {/* The display lives on the wrapper, not the control: `hidden` and
                 the Button's own `inline-flex` are both plain display utilities,
                 so on one element the generated order decides, not the markup. */}
-            <span className="hidden sm:inline-flex">
+            <LangSwitch className="mr-2 hidden lg:flex" />
+            <span className="hidden lg:inline-flex">
               <Button variant="primary" onClick={openEarlyAccess}>
-                Request early access
+                {copy.nav.ctaShort}
               </Button>
             </span>
-            <span className="inline-flex sm:hidden">
-              <IconButton
-                label="Open menu"
-                path={icons.menu}
-                onClick={showMenu}
-              />
+            <span className="inline-flex lg:hidden">
+              <IconButton label={copy.nav.openMenu} path={icons.menu} onClick={showMenu} />
             </span>
           </div>
         </div>

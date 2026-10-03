@@ -45,10 +45,56 @@ function api(env: Env): Plugin {
   }
 }
 
+/**
+ * Every page in both languages: /ca-en and /ca-fr, each with the landing and
+ * the legal pages. scripts/pages.mjs writes the HTML for each.
+ */
+const LOCALES = ['ca-en', 'ca-fr']
+const PAGES = ['', 'privacy', 'cookies', 'terms', 'accessibility']
+const ENTRIES = Object.fromEntries(
+  LOCALES.flatMap((locale) =>
+    PAGES.map((page) => [`${locale}${page ? `-${page}` : ''}`, `${locale}/${page ? `${page}/` : ''}index.html`]),
+  ),
+)
+
+/**
+ * The addresses as Vercel serves them (vercel.json), for the dev and preview
+ * servers: clean paths onto their index.html, and the root and the old
+ * unprefixed legal paths redirected into a language.
+ */
+const PAGE = /^\/(ca-en|ca-fr)(?:\/(privacy|cookies|terms|accessibility))?\/?(\?.*)?$/
+const OLD = /^\/(privacy|cookies|terms|accessibility)\/?$/
+function localeRoutes(): Plugin {
+  const route = (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+    const url = req.url ?? '/'
+    const redirect = (to: string) => {
+      res.statusCode = 307
+      res.setHeader('Location', to)
+      res.end()
+    }
+    if (url === '/' || url.startsWith('/?')) {
+      const french = /^fr\b/i.test(req.headers['accept-language'] ?? '')
+      return redirect(french ? '/ca-fr' : '/ca-en')
+    }
+    const old = url.match(OLD)
+    if (old) return redirect(`/ca-en/${old[1]}`)
+    const page = url.match(PAGE)
+    if (page) req.url = `/${page[1]}/${page[2] ? `${page[2]}/` : ''}index.html${page[3] ?? ''}`
+    next()
+  }
+  return {
+    name: 'meshrun-locale-routes',
+    configureServer: (server) => void server.middlewares.use(route),
+    configurePreviewServer: (server) => void server.middlewares.use(route),
+  }
+}
+
 export default defineConfig(({ mode }) => ({
   // '' loads every variable in .env*, not only VITE_ ones; the server-side
   // keys stay here in Node and never reach the bundle.
-  plugins: [react(), tailwindcss(), api(loadEnv(mode, process.cwd(), ''))],
+  plugins: [react(), tailwindcss(), localeRoutes(), api(loadEnv(mode, process.cwd(), ''))],
   // host:true so the dev server is reachable from the Windows browser over WSL2.
   server: { host: true, port: 5173, strictPort: true },
+  // Each page, in each language, as its own document at its own address.
+  build: { rolldownOptions: { input: ENTRIES } },
 }))

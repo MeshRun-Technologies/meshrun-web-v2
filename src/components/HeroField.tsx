@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { createField, type Field, OBJECT_VIEW, type View } from "../lib/heroField";
+import { motionPaused, onMotionChange } from "../lib/motion";
 
 /** Where the motion starts: a frame that already reads well before it moves. */
 const START_S = 14;
@@ -9,9 +10,10 @@ const START_S = 14;
  * The landing's render, filling its pane behind the copy.
  *
  * It only runs while it can be seen: off screen or in a hidden tab the loop
- * stops, and with reduced motion it draws one still frame. Until its first
- * frame lands the canvas is transparent, so the pane's own black shows rather
- * than a flash; without WebGL that black simply stays.
+ * stops, and with reduced motion, or the page's motion paused, it draws one
+ * still frame. Until its first frame lands the canvas is transparent, so the
+ * pane's own black shows rather than a flash; without WebGL that black simply
+ * stays.
  */
 export function HeroField({ view = OBJECT_VIEW, className = "" }: { view?: View; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -55,10 +57,11 @@ export function HeroField({ view = OBJECT_VIEW, className = "" }: { view?: View;
     };
     drawRef.current = () => field.draw(elapsed);
     const update = () => {
-      const run = onScreen && !document.hidden && !still.matches;
+      const held = still.matches || motionPaused();
+      const run = onScreen && !document.hidden && !held;
       if (run && !frame) frame = requestAnimationFrame(tick);
       if (!run) stop();
-      if (still.matches) {
+      if (held) {
         field.draw(elapsed);
         canvas.dataset.ready = "true";
       }
@@ -77,6 +80,7 @@ export function HeroField({ view = OBJECT_VIEW, className = "" }: { view?: View;
     resize.observe(canvas);
     document.addEventListener("visibilitychange", update);
     still.addEventListener("change", update);
+    const unsubscribe = onMotionChange(update);
     update();
 
     return () => {
@@ -85,6 +89,7 @@ export function HeroField({ view = OBJECT_VIEW, className = "" }: { view?: View;
       resize.disconnect();
       document.removeEventListener("visibilitychange", update);
       still.removeEventListener("change", update);
+      unsubscribe();
       field.destroy();
       fieldRef.current = null;
     };
@@ -93,7 +98,7 @@ export function HeroField({ view = OBJECT_VIEW, className = "" }: { view?: View;
   // A new view glides in while the loop runs; held still, it jumps and redraws.
   const { azimuth, polar, zoom } = view;
   useEffect(() => {
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches || motionPaused();
     fieldRef.current?.setView({ azimuth, polar, zoom }, still);
     if (still) drawRef.current();
   }, [azimuth, polar, zoom]);
